@@ -162,7 +162,7 @@ export default function Detail(props) {
 
                 {allStatus && allStatus[order.orderType].map((status, i) => {
                     return (
-                        <Form.Group>
+                        <Form.Group as={Row} controlId={`formBasicCheckbox-${i}`}>
                         <Form.Check
                     label={status}
                     defaultChecked={order.nextOrderStatus > i}
