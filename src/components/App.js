@@ -8,6 +8,7 @@ import List from "./List"
 import Login from "./Login"
 import Header from "./Header"
 import PrivateRoute from "./PrivateRoute"
+import Detail from "./Detail"
 // import ForgotPassword from "./ForgotPassword"
 // import UpdateProfile from "./UpdateProfile"
 
@@ -26,7 +27,7 @@ function App() {
             <Switch>
               <PrivateRoute exact path="/" component={List} />
               <PrivateRoute exact path="/dashboard" component={Dashboard} />
-              {/* <PrivateRoute path="/update-profile" component={UpdateProfile} /> */}
+              <PrivateRoute path="/detail/:orderId" component={Detail} />
               {/* <Route path="/signup" component={Signup} /> */}
               <Route path="/login" component={Login} />
               {/* <Route path="/forgot-password" component={ForgotPassword} /> */}

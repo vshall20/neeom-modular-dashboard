@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react"
 import { Table, InputGroup, FormControl } from "react-bootstrap";
+import { Link } from "react-router-dom";
 import app from '../firebase';
 
 export default function List() {
@@ -7,6 +8,8 @@ export default function List() {
     const [initOrderList, setInitOrderList] = useState([]);
     const [loading, setLoading] = useState(false);
 //   const [error, setError] = useState("")
+
+
 
   function handleSearch(e) {
       console.log(e.target.value);
@@ -26,8 +29,8 @@ export default function List() {
           )
       }
       );
-      console.log("newArray:", newArray)
-      setOrderList(newArray);
+    //   console.log("newArray:", newArray)
+      setOrderList([...newArray]);
 
       }
   }
@@ -69,7 +72,7 @@ export default function List() {
             />
         </InputGroup>
         {loading && <div>Loading...</div>}
-        <Table striped bordered hover variant="dark">
+        <Table striped bordered hover variant="dark" size="sm">
             <thead>
                 <tr>
                 <th>OrderId</th>
@@ -79,15 +82,15 @@ export default function List() {
                 </tr>
             </thead>
             <tbody>
-                {orderList.map(order => {
+                {orderList.map((order, index) => {
                     if(order.orderStatus !== 'Order Close')
                     return (
-                        <tr>
-                <td>{order.orderId}</td>
-                <td>{order.partyId}</td>
-                <td>{order.orderDate}</td>
-                <td>{order.orderStatus}</td>
-                </tr>
+                        <tr key={index}>
+                            <td><Link to={`/detail/${order.orderId}`}>{order.orderId}</Link></td>
+                            <td>{order.partyId}</td>
+                            <td>{order.orderDate}</td>
+                            <td>{order.orderStatus}</td>
+                        </tr>
                     )
                     else
                     return null
