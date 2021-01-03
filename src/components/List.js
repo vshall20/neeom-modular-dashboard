@@ -46,7 +46,9 @@ export default function List() {
     app.firestore().collection('orders').onSnapshot((querySnapshot) => {
         const items = [];
         querySnapshot.forEach((doc) => {
-            items.push(doc.data());
+            let _item = doc.data();
+            _item.id = doc.id;
+            items.push(_item);
         });
         setOrderList(items);
         setInitOrderList(items);
@@ -82,11 +84,11 @@ export default function List() {
                 </tr>
             </thead>
             <tbody>
-                {orderList.map((order, index) => {
+                {orderList.map((order) => {
                     if(order.orderStatus !== 'Order Close')
                     return (
-                        <tr key={index}>
-                            <td><Link to={`/detail/${order.orderId}`}>{order.orderId}</Link></td>
+                        <tr key={order.id}>
+                            <td><Link to={`/detail/${order.id}`}>{order.orderId}</Link></td>
                             <td>{order.partyId}</td>
                             <td>{order.orderDate}</td>
                             <td>{order.orderStatus}</td>
