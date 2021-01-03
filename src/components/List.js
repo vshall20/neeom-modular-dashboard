@@ -1,12 +1,36 @@
 import React, { useState, useEffect } from "react"
-import { Link, useHistory } from "react-router-dom"
+import { Table, InputGroup, FormControl } from "react-bootstrap";
 import app from '../firebase';
 
 export default function List() {
     const [orderList, setOrderList] = useState([]);
+    const [initOrderList, setInitOrderList] = useState([]);
     const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("")
+//   const [error, setError] = useState("")
 
+  function handleSearch(e) {
+      console.log(e.target.value);
+      let value = e.target.value
+      if(value === null || value === "" ) {
+          setOrderList(initOrderList);
+      }
+      else {
+
+      const newArray = initOrderList.filter(o =>
+        {
+          return Object.keys(o).some(k =>
+          {
+            let val = o[k];
+            return String(val).toLowerCase().includes(value.toLowerCase())
+          }
+          )
+      }
+      );
+      console.log("newArray:", newArray)
+      setOrderList(newArray);
+
+      }
+  }
 
   //REALTIME GET FUNCTION
   function getOrders() {
@@ -16,14 +40,13 @@ export default function List() {
       //.where('score', '<=', 10)    // needs index
       //.orderBy('owner', 'asc')
       //.limit(3)
-      console.log(app);
     app.firestore().collection('orders').onSnapshot((querySnapshot) => {
         const items = [];
         querySnapshot.forEach((doc) => {
-          items.push(doc.data());
+            items.push(doc.data());
         });
-        console.log(items)
         setOrderList(items);
+        setInitOrderList(items);
         setLoading(false);
       });
   }
@@ -35,7 +58,42 @@ export default function List() {
 
   return (
     <div>
-      
+        <InputGroup className="mb-3">
+            <InputGroup.Prepend>
+                <InputGroup.Text>Search:</InputGroup.Text>
+            </InputGroup.Prepend>
+            <FormControl
+            placeholder=""
+            aria-label=""
+            onChange={handleSearch}
+            />
+        </InputGroup>
+        {loading && <div>Loading...</div>}
+        <Table striped bordered hover variant="dark">
+            <thead>
+                <tr>
+                <th>OrderId</th>
+                <th>PartyId</th>
+                <th>Date</th>
+                <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {orderList.map(order => {
+                    if(order.orderStatus !== 'Order Close')
+                    return (
+                        <tr>
+                <td>{order.orderId}</td>
+                <td>{order.partyId}</td>
+                <td>{order.orderDate}</td>
+                <td>{order.orderStatus}</td>
+                </tr>
+                    )
+                    else
+                    return null
+                })}
+            </tbody>
+        </Table>  
     </div>
   )
 }
