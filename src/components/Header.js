@@ -37,10 +37,10 @@ export default function Header() {
   {
   currentUser && <Nav>
     {/* "NavLink" here since "active" class styling is needed */}
-    <Nav.Link as={NavLink} to='/' exact>Orders</Nav.Link>
+    {/* <Nav.Link as={NavLink} to='/' exact>Orders</Nav.Link> */}
     <Nav.Link as={NavLink} to='/dashboard'>Dashboard</Nav.Link>
-    <Nav.Link as={NavLink} to='/add'>Add</Nav.Link>
-    <Nav.Link as={NavLink} to='/scan'>Scan</Nav.Link>
+    {/* <Nav.Link as={NavLink} to='/add'>Add</Nav.Link> */}
+    {/* <Nav.Link as={NavLink} to='/scan'>Scan</Nav.Link> */}
     <Nav.Link as={Link} eventKey="logout" onSelect={handleSelect}>Logout</Nav.Link>
   </Nav>
 }
