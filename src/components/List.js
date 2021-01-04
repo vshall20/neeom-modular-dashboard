@@ -43,7 +43,7 @@ export default function List() {
       //.where('score', '<=', 10)    // needs index
       //.orderBy('owner', 'asc')
       //.limit(3)
-    app.firestore().collection('orders').onSnapshot((querySnapshot) => {
+    app.firestore().collection('orders').orderBy('orderId', 'desc').onSnapshot((querySnapshot) => {
         const items = [];
         querySnapshot.forEach((doc) => {
             let _item = doc.data();
