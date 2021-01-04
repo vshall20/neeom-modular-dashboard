@@ -54,11 +54,11 @@ export default function Detail(props) {
       }
     
       // EDIT FUNCTION
-      function editOrder(updatedOrder, cb) {
+      function editOrder(updatedOrder) {
         setLoading();
         app.firestore().collection('orders')
           .doc(props.match.params.orderId)
-          .update(updatedOrder).then(() => cb())
+          .update(updatedOrder).then(() => getOrder())
           .catch((err) => {
             console.error(err);
           });
@@ -85,7 +85,7 @@ export default function Detail(props) {
                 orderHistory: [...orderHistory, {updatedBy: currentUser.email, updatedTo:selectedStatus, updateDate: getToday()}]
         }
         // console.log(order, updatedOrder);
-        editOrder(updatedOrder, handleClose);
+        editOrder(updatedOrder);
       }
 
       function handleDelete() {
