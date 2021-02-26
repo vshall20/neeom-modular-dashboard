@@ -66,7 +66,7 @@ export default function Dashboard(props) {
     console.log("Init orderlist length::", initOrderList.length);
     let filteredOrders = initOrderList.filter(order => order.orderStatus !== 'Order Close' && order.orderStatus !== 'Dispatch' && order.orderStatus !== 'Packed')
     let orders = _.countBy(filteredOrders, 'orderType')
-    let statusOrders = _.countBy(filteredOrders, 'orderStatus')
+    let statusOrders = _.countBy(initOrderList, 'orderStatus')
     setPendingOrders(orders)
     setStatusOrders(statusOrders)
     console.log("Orders:::", Object.entries(orders), initOrderList.length);
