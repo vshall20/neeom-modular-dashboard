@@ -17,6 +17,7 @@ let _ = require('underscore');
 
 export default function Dashboard(props) {
   const [pendingOrders, setPendingOrders] = useState([]);
+  const [statusOrders, setStatusOrders] = useState([]);
   const [initOrderList, setInitOrderList] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("")
@@ -65,7 +66,9 @@ export default function Dashboard(props) {
     console.log("Init orderlist length::", initOrderList.length);
     let filteredOrders = initOrderList.filter(order => order.orderStatus !== 'Order Close' && order.orderStatus !== 'Dispatch' && order.orderStatus !== 'Packed')
     let orders = _.countBy(filteredOrders, 'orderType')
+    let statusOrders = _.countBy(filteredOrders, 'orderStatus')
     setPendingOrders(orders)
+    setStatusOrders(statusOrders)
     console.log("Orders:::", Object.entries(orders), initOrderList.length);
   }
 
@@ -73,7 +76,7 @@ export default function Dashboard(props) {
     <div>
         {error && <Alert variant="danger">{error}</Alert>}
         {loading && <h1>Loading data....</h1>}
-      <Card key="head">
+      <Card key="head-pending">
         <Card.Body>
           <h2 className="text-center mb-4">Pending Orders</h2>
         </Card.Body>
@@ -81,7 +84,21 @@ export default function Dashboard(props) {
       <div className="d-flex flex-wrap justify-content-around flex-fill">
       {Object.entries(pendingOrders).map(order => (
           <Card className="" key={order.id}>
-              <Card.Header><Link to={`/list/${order[0]}`}>{order[0]}</Link></Card.Header>
+              <Card.Header><Link to={`/list/orderType=${order[0]}`}>{order[0]}</Link></Card.Header>
+              <Card.Body>{order[1]}</Card.Body>
+          </Card>
+      ))}
+      </div>
+
+      <Card key="head-status" className="mt-5">
+        <Card.Body>
+          <h2 className="text-center mb-4">Orders By Status</h2>
+        </Card.Body>
+      </Card>
+      <div className="d-flex flex-wrap justify-content-around flex-fill">
+      {Object.entries(statusOrders).map(order => (
+          <Card className="" key={order.id}>
+              <Card.Header><Link to={`/list/orderStatus=${order[0]}`}>{order[0]}</Link></Card.Header>
               <Card.Body>{order[1]}</Card.Body>
           </Card>
       ))}

@@ -56,8 +56,9 @@ export default function List(props) {
       });
   }
 
-  function getOrdersByOrderType(orderType) {
-    app.firestore().collection('orders').where('orderType',"==", orderType).orderBy('orderId', 'desc').onSnapshot((querySnapshot) => {
+  function getOrdersByOrderType(filter) {
+    let _filter = filter.split("=")
+    app.firestore().collection('orders').where(_filter[0],"==", _filter[1]).orderBy('orderId', 'desc').onSnapshot((querySnapshot) => {
       const items = [];
       querySnapshot.forEach((doc) => {
           let _item = doc.data();
@@ -72,7 +73,7 @@ export default function List(props) {
 
   useEffect(() => {
     console.log(props.match.params);
-    Object.keys(props.match.params).length > 0 ? getOrdersByOrderType(props.match.params.orderType) : getOrders();
+    Object.keys(props.match.params).length > 0 ? getOrdersByOrderType(props.match.params.filter) : getOrders();
     // eslint-disable-next-line
   }, []);
 

@@ -26,7 +26,7 @@ function App() {
             <Header></Header>
             <Switch>
               <PrivateRoute exact path="/" component={List} />
-              <PrivateRoute exact path="/list/:orderType" component={List} />
+              <PrivateRoute exact path="/list/:filter" component={List} />
               <PrivateRoute exact path="/dashboard" component={Dashboard} />
               <PrivateRoute path="/detail/:orderId" component={Detail} />
               {/* <Route path="/signup" component={Signup} /> */}
