@@ -3,7 +3,7 @@ import { Table, InputGroup, FormControl } from "react-bootstrap";
 import { Link } from "react-router-dom";
 import app from '../firebase';
 
-export default function List() {
+export default function List(props) {
     const [orderList, setOrderList] = useState([]);
     const [initOrderList, setInitOrderList] = useState([]);
     const [loading, setLoading] = useState(false);
@@ -56,8 +56,23 @@ export default function List() {
       });
   }
 
+  function getOrdersByOrderType(orderType) {
+    app.firestore().collection('orders').where('orderType',"==", orderType).orderBy('orderId', 'desc').onSnapshot((querySnapshot) => {
+      const items = [];
+      querySnapshot.forEach((doc) => {
+          let _item = doc.data();
+          _item.id = doc.id;
+          items.push(_item);
+      });
+      setOrderList(items);
+      setInitOrderList(items);
+      setLoading(false);
+    }); 
+  }
+
   useEffect(() => {
-    getOrders();
+    console.log(props.match.params);
+    Object.keys(props.match.params).length > 0 ? getOrdersByOrderType(props.match.params.orderType) : getOrders();
     // eslint-disable-next-line
   }, []);
 
