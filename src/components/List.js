@@ -58,7 +58,7 @@ export default function List(props) {
 
   function getOrdersByOrderType(filter) {
     let _filter = filter.split("=")
-    app.firestore().collection('orders').where(_filter[0],"==", _filter[1]).orderBy('orderId', 'desc').onSnapshot((querySnapshot) => {
+    app.firestore().collection('orders').where(_filter[0],"==", decodeURIComponent(_filter[1])).orderBy('orderId', 'desc').onSnapshot((querySnapshot) => {
       const items = [];
       querySnapshot.forEach((doc) => {
           let _item = doc.data();

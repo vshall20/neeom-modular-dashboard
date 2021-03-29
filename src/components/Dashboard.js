@@ -84,7 +84,7 @@ export default function Dashboard(props) {
       <div className="d-flex flex-wrap justify-content-around flex-fill">
       {Object.entries(pendingOrders).map(order => (
           <Card className="" key={order.id}>
-              <Card.Header><Link to={`/list/orderType=${order[0]}`}>{order[0]}</Link></Card.Header>
+              <Card.Header><Link to={`/list/orderType=${encodeURIComponent(order[0])}`}>{order[0]}</Link></Card.Header>
               <Card.Body>{order[1]}</Card.Body>
           </Card>
       ))}
