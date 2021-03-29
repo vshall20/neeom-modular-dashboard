@@ -23,6 +23,7 @@ export default function Dashboard(props) {
   const [error, setError] = useState("")
   const {
     currentUser,
+    isAdmin,
     logout
   } = useAuth()
 
@@ -54,6 +55,7 @@ export default function Dashboard(props) {
 
 
   useEffect(() => {
+    console.log(isAdmin);
     getOrders();
     // eslint-disable-next-line
   }, []);

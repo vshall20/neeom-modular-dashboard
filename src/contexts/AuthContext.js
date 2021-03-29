@@ -8,8 +8,13 @@ export function useAuth() {
 }
 
 export function AuthProvider({ children }) {
-  const [currentUser, setCurrentUser] = useState()
-  const [loading, setLoading] = useState(true)
+  const [currentUser, setCurrentUser] = useState();
+  const [isAdmin, setIsAdmin] = useState(true);
+  const [loading, setLoading] = useState(true);
+
+  function adminEmails() {
+    return ['vishal@neeommodular.com','chirag@neeommodular.com'];
+  }
 
   function signup(email, password) {
     // return auth.createUserWithEmailAndPassword(email, password)
@@ -38,6 +43,7 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged(user => {
       setCurrentUser(user)
+      setIsAdmin(adminEmails().includes(user.email));
       setLoading(false)
     })
 
@@ -46,6 +52,7 @@ export function AuthProvider({ children }) {
 
   const value = {
     currentUser,
+    isAdmin,
     login,
     logout,
     resetPassword,

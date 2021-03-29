@@ -5,10 +5,12 @@ import { AuthProvider } from "../contexts/AuthContext"
 import { BrowserRouter as Router, Switch, Route } from "react-router-dom"
 import Dashboard from "./Dashboard"
 import List from "./List"
+import UserList from "./UserList"
 import Login from "./Login"
 import Header from "./Header"
 import PrivateRoute from "./PrivateRoute"
 import Detail from "./Detail"
+import AdminRoute from "./AdminRoute"
 // import ForgotPassword from "./ForgotPassword"
 // import UpdateProfile from "./UpdateProfile"
 
@@ -25,9 +27,10 @@ function App() {
           <AuthProvider>
             <Header></Header>
             <Switch>
-              <PrivateRoute exact path="/" component={List} />
+              <AdminRoute exact path="/" component={List} />
               <PrivateRoute exact path="/list/:filter" component={List} />
-              <PrivateRoute exact path="/dashboard" component={Dashboard} />
+              <AdminRoute exact path="/dashboard" component={Dashboard} />
+              <PrivateRoute exact path="/records" component={UserList} />
               <PrivateRoute path="/detail/:orderId" component={Detail} />
               {/* <Route path="/signup" component={Signup} /> */}
               <Route path="/login" component={Login} />

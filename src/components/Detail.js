@@ -13,7 +13,7 @@ export default function Detail(props) {
     const [isChecked, setIsChecked] = useState(false);
     const [loading, setLoading] = useState(false);
     const history = useHistory();
-    const {currentUser} = useAuth();
+    const {currentUser, isAdmin} = useAuth();
 
     async function getAllStatus() {
         const snapshot = await app.firestore().collection("statusType").get();
@@ -180,9 +180,9 @@ export default function Detail(props) {
                 <Button variant="primary" onClick={handleSave}>
                     Save
                 </Button>
-                <Button variant="danger" onClick={handleDelete}>
+                {isAdmin && <Button variant="danger" onClick={handleDelete}>
                     Delete
-                </Button>
+                </Button>}
                 <Button variant="info" onClick={handleClose}>
                     Close
                 </Button>
