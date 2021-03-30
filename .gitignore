@@ -24,3 +24,5 @@ yarn-error.log*
 
 .eslintcache
 hosting.**.cache
+# Local Netlify folder
+.netlify
