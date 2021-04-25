@@ -33,7 +33,9 @@ export default function Header() {
         <div>
             <Navbar bg="light">
   {/* "Link" in brand component since just redirect is needed */}
-  <Navbar.Brand as={Link} to='/'>NM</Navbar.Brand>
+  <Navbar.Brand as={Link} to='/'>
+    <img src="/logo192.png" width='30px'></img>
+  </Navbar.Brand>
   {
   currentUser && <Nav>
     {/* "NavLink" here since "active" class styling is needed */}
