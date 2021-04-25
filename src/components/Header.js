@@ -33,11 +33,12 @@ export default function Header() {
         <div>
             <Navbar bg="light">
   {/* "Link" in brand component since just redirect is needed */}
-  <Navbar.Brand as={Link} to='/'>Neeom Modular</Navbar.Brand>
+  <Navbar.Brand as={Link} to='/'>NM</Navbar.Brand>
   {
   currentUser && <Nav>
     {/* "NavLink" here since "active" class styling is needed */}
     {/* <Nav.Link as={NavLink} to='/' exact>Orders</Nav.Link> */}
+    {isAdmin && <Nav.Link as={NavLink} to='/add'>Add</Nav.Link>}
     {isAdmin && <Nav.Link as={NavLink} to='/dashboard'>Dashboard</Nav.Link>}
     {/* <Nav.Link as={NavLink} to='/add'>Add</Nav.Link> */}
     {/* <Nav.Link as={NavLink} to='/scan'>Scan</Nav.Link> */}
