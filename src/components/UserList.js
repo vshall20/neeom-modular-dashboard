@@ -14,7 +14,7 @@ export default function UserList(props) {
   function handleSearch(e) {
       console.log(e.target.value);
       let value = e.target.value
-      if(value === null || value === "" ) {
+      if(value === null || value.length < 4 ) {
           setOrderList([]);
       }
       else {
