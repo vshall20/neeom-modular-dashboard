@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from "react"
-import { Table, InputGroup, FormControl } from "react-bootstrap";
+import { Table, InputGroup, FormControl, Button } from "react-bootstrap";
 import { Link } from "react-router-dom";
 import app from '../firebase';
+import XLSX from 'xlsx';
+
 
 export default function List(props) {
     const [orderList, setOrderList] = useState([]);
@@ -71,6 +73,34 @@ export default function List(props) {
     }); 
   }
 
+  function downloadToCSV() {
+    console.log("DownloadToCSV", orderList[0]);
+    let _orders = [];
+    orderList.map(o => {
+      let order = {};
+      order.orderDate = o.orderDate;
+      order.orderId = o.orderId;
+      order.partyId = o.partyId;
+      order.orderType = o.orderType;
+      order.orderQuantity = o.orderQuantity;
+      order.orderStatus = o.orderStatus;
+      _orders.push(order);
+    });
+    var ws = XLSX.utils.json_to_sheet(_orders);
+    var wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Orders");
+    const wbout = XLSX.write(wb, {
+      type: 'base64',
+      bookType: "xlsx"
+    });
+    XLSX.writeFile(wb, "orderList.xlsx")
+    // const uri = FileSystem.cacheDirectory + 'Orders.xlsx';
+    // console.log(`Writing to ${JSON.stringify(uri)} with text: ${wbout}`);
+    // await FileSystem.writeAsStringAsync(uri, wbout, {
+    //   encoding: FileSystem.EncodingType.Base64
+    // });
+  }
+
   useEffect(() => {
     console.log(props.match.params);
     Object.keys(props.match.params).length > 0 ? getOrdersByOrderType(props.match.params.filter) : getOrders();
@@ -88,6 +118,9 @@ export default function List(props) {
             aria-label=""
             onChange={handleSearch}
             />
+          <InputGroup.Append>
+          <Button variant="outline-secondary" onClick={downloadToCSV}>Download</Button>
+    </InputGroup.Append>
         </InputGroup>
         {loading && <div>Loading...</div>}
         <Table striped bordered hover variant="dark" size="sm">
