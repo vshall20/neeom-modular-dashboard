@@ -24,7 +24,7 @@ export default function UserList(props) {
           return Object.keys(o).some(k =>
           {
             let val = o[k];
-            return String(val).toLowerCase().includes(value.toLowerCase())
+            return k.toLocaleLowerCase() === 'orderid' && String(val).toLowerCase().includes(value.toLowerCase())
           }
           )
       }
