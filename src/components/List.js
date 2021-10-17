@@ -49,13 +49,14 @@ export default function List(props) {
         const items = [];
         querySnapshot.forEach((doc) => {
             let _item = doc.data();
-            if(_item.orderStatus.includes('Close')) {
-              app.firestore().collection("ordersClosed")
-              .add(_item)
-              .then(() => {
-                app.firestore().collection('orders').doc(doc.id).delete()
-              })
-            }
+            // if(_item.orderStatus.includes('Close')) { //&& _item.orderId.includes('Test')
+            //   app.firestore().collection("ordersClosed")
+            //   .doc(doc.id)
+            //   .set({ ..._item })
+            //   .then(() => {
+            //     app.firestore().collection('orders').doc(doc.id).delete()
+            //   })
+            // }
             _item.id = doc.id;
             items.push(_item);
         });
