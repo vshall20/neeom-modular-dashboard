@@ -15,7 +15,8 @@
 
   const [allType, setAllType] = useState([]);
   const [allAreas, setAllAreas] = useState([]);
-  const [data, setData] = useState({})
+  const [data, setData] = useState({});
+  const [error, setError] = useState(null);
   const [selectedType, setSelectedType] = useState("");
   const [selectedArea, setSelectedArea] = useState("");
   const orderStatus = 'BOM'
@@ -26,9 +27,18 @@
     return `${date.getDate()}-${date.getMonth()+1}-${date.getFullYear()}`
   }
 
+  function resetForm() {
+    setData({})
+    document.getElementById('myForm').reset();
+  }
+
   async function handleSave(e) {
     e.preventDefault();
     if(!isAdmin){
+      setError("You do not have access.")
+      setTimeout(() => {
+        setError(null);
+      }, 2000);
       return;
     }
     console.log(data);
@@ -46,13 +56,25 @@
         orderDate: data.formOrderDate,
         orderStatus: orderStatus,
         nextOrderStatus: 0,
+        orderArea: selectedArea,
+        orderSqFt: data.formOrderSqFt,
         createdBy: currentUser.email
       })
       .then(function() {
         console.log("Document successfully written!");
+        setError('Data Saved Successfully')
+        resetForm(data);
+        setTimeout(() => {
+          setError(null)
+        }, 2000);
       })
       .catch(e => {
         console.error(e);
+        setError('Something went wrong'+e.toString())
+        resetForm(data);
+        setTimeout(() => {
+          setError(null)
+        }, 2000);
       })
   }
 
@@ -99,16 +121,16 @@
   return (
     <div>
       <Container>
-        <Form>
+        <Form id="myForm">
           <Form.Group as={Row} controlId="formOrderId">
             <Form.Label sm="2">Order Id</Form.Label>
-            <Form.Control sm="10" className="pl-3" defaultValue={" "} onChange={handleOnChange}>
+            <Form.Control sm="10" className="pl-3" defaultValue={""} onChange={handleOnChange}>
             </Form.Control>
           </Form.Group>
 
           <Form.Group as={Row} controlId="formPartyId">
             <Form.Label sm="2">Party Id</Form.Label>
-            <Form.Control sm="10" className="pl-3" defaultValue={" "} onChange={handleOnChange}>
+            <Form.Control sm="10" className="pl-3" defaultValue={""} onChange={handleOnChange}>
 
             </Form.Control>
           </Form.Group>
@@ -131,14 +153,14 @@
 
           <Form.Group as={Row} controlId="formOrderQuantity">
             <Form.Label sm="2">Order Quantity</Form.Label>
-            <Form.Control sm="10" className="pl-3" defaultValue={" "} onChange={handleOnChange}>
+            <Form.Control sm="10" className="pl-3" defaultValue={""} onChange={handleOnChange}>
 
             </Form.Control>
           </Form.Group>
 
           <Form.Group as={Row} controlId="formOrderSqFt">
             <Form.Label sm="2">SqFt</Form.Label>
-            <Form.Control sm="10" className="pl-3" defaultValue={" "} onChange={handleOnChange}>
+            <Form.Control sm="10" className="pl-3" defaultValue={""} onChange={handleOnChange}>
             </Form.Control>
           </Form.Group>
 
@@ -162,6 +184,7 @@
             
           </Form.Group>
         </Form>
+        {error && <h2>{error}</h2>}
       </Container>
     </div>
   );

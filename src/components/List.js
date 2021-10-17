@@ -78,13 +78,17 @@ export default function List(props) {
     let _orders = [];
     orderList.map(o => {
       let order = {};
-      order.orderDate = o.orderDate;
-      order.orderId = o.orderId;
-      order.partyId = o.partyId;
-      order.orderType = o.orderType;
-      order.orderQuantity = o.orderQuantity;
-      order.orderStatus = o.orderStatus;
-      _orders.push(order);
+      if(!o.orderStatus.includes('Close')) {
+        order.orderDate = o.orderDate;
+        order.orderId = o.orderId;
+        order.partyId = o.partyId;
+        order.orderType = o.orderType;
+        order.orderQuantity = o.orderQuantity;
+        order.orderStatus = o.orderStatus;
+        order.orderSqFt = o.orderSqFt;
+        order.orderArea = o.orderArea;
+        _orders.push(order);
+      }
     });
     var ws = XLSX.utils.json_to_sheet(_orders);
     var wb = XLSX.utils.book_new();

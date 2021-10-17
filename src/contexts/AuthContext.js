@@ -13,7 +13,7 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
 
   function adminEmails() {
-    return ['vishal@neeommodular.com','chirag@neeommodular.com'];
+    return ['vishal@neeommodular.com','chirag@neeommodular.com','office@neeommodular.com','admin@neeommodular.com'];
   }
 
   function signup(email, password) {

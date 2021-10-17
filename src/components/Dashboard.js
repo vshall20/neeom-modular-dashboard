@@ -18,8 +18,10 @@ let _ = require('underscore');
 export default function Dashboard(props) {
   const [pendingOrders, setPendingOrders] = useState([]);
   const [statusOrders, setStatusOrders] = useState([]);
+  const [statusOrdersSum, setStatusOrdersSum] = useState([]);
   const [initOrderList, setInitOrderList] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [date, setDate] = useState(getToday());
   const [error, setError] = useState("")
   const {
     currentUser,
@@ -27,6 +29,16 @@ export default function Dashboard(props) {
     logout
   } = useAuth()
 
+
+  function getDateFromString(_date) {
+    let date = new Date(_date);
+    return `${date.getDate()}-${date.getMonth()+1}-${date.getFullYear()}`
+  }
+
+  function getToday() {
+    let date = new Date();
+    return `${date.getDate()}-${date.getMonth()+1}-${date.getFullYear()}`
+  }
 
   function getOrders() {
     setLoading(true);
@@ -55,20 +67,46 @@ export default function Dashboard(props) {
 
 
   useEffect(() => {
-    console.log(isAdmin);
+    console.log(getToday());
     getOrders();
     // eslint-disable-next-line
   }, []);
 
   useEffect(() => {
     calculate();
+    calculateSum(getDateFromString(new Date()));
   }, [initOrderList]);
+
+  function handleDateChange(e) {
+    let date = getDateFromString(e.target.value);
+    setDate(date);
+    calculateSum(date);
+  }
+
+  function calculateSum(date) {
+    let orderByStatus = _.groupBy(initOrderList, 'orderStatus');
+    let statusSum = {};
+    Object.keys(orderByStatus).map(status => {
+      let sumSqft = orderByStatus[status].reduce((sum, o) => {
+        let orderDate = o.orderHistory ? o.orderHistory[o.orderHistory.length - 1].updateDate : o.orderDate;
+        console.log(o.orderId,o.orderSqFt, orderDate);
+        if(orderDate === date) {
+          return sum + (parseFloat(o.orderSqFt) || 0)
+        } else {
+          return sum + 0;
+        }
+      }, 0)
+      statusSum[status] = sumSqft;
+    })
+    setStatusOrdersSum(statusSum)
+  }
 
   function calculate() {
     console.log("Init orderlist length::", initOrderList.length);
     let filteredOrders = initOrderList.filter(order => order.orderStatus !== 'Order Close' && order.orderStatus !== 'Dispatch' && order.orderStatus !== 'Packed')
     let orders = _.countBy(filteredOrders, 'orderType')
-    let statusOrders = _.countBy(initOrderList, 'orderStatus')
+    let statusOrders = _.countBy(initOrderList, 'orderStatus');
+    let orderByStatus = _.groupBy(initOrderList, 'orderStatus');
     setPendingOrders(orders)
     setStatusOrders(statusOrders)
     console.log("Orders:::", Object.entries(orders), initOrderList.length);
@@ -78,6 +116,8 @@ export default function Dashboard(props) {
     <div>
         {error && <Alert variant="danger">{error}</Alert>}
         {loading && <h1>Loading data....</h1>}
+
+      <>
       <Card key="head-pending">
         <Card.Body>
           <h2 className="text-center mb-4">Pending Orders</h2>
@@ -91,8 +131,10 @@ export default function Dashboard(props) {
           </Card>
       ))}
       </div>
+      </>
 
-      <Card key="head-status" className="mt-5">
+      <>
+      <Card key="head-pending">
         <Card.Body>
           <h2 className="text-center mb-4">Orders By Status</h2>
         </Card.Body>
@@ -105,6 +147,26 @@ export default function Dashboard(props) {
           </Card>
       ))}
       </div>
+      </>
+
+      <>
+      <Card key="head-pending">
+        <Card.Body>
+          <h2 className="text-center mb-4">Daily Work</h2>
+          <input type="date" defaultValue={getToday} onChange={handleDateChange}/>
+          <span> Date: {date}</span>
+        </Card.Body>
+      </Card>
+      <div className="d-flex flex-wrap justify-content-around flex-fill">
+      {Object.entries(statusOrdersSum).map(order => (
+          <Card className="" key={order.id}>
+              <Card.Header><Link to={`/list/orderStatus=${order[0]}`}>{order[0]}</Link></Card.Header>
+              <Card.Body>{order[1]}</Card.Body>
+          </Card>
+      ))}
+      </div>
+      </>
+
     </div>
   )
 }
