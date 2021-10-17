@@ -29,11 +29,18 @@ export default function Detail(props) {
     //.where('score', '<=', 10)    // needs index
     //.orderBy('owner', 'asc')
     //.limit(3)
-    app.firestore().collection('orders').doc(props.match.params.orderId).get().then((item) => {
-        // console.log(item);
+    app.firestore().collection('orders').doc(props.match.params.orderId).get()
+    .then((item) => {
+        if(item.exists === false) {
+          history.push('/')
+          return;
+        }
         const items = item.data();
         setOrder(items);
         setLoading(false);
+        })
+        .catch(e => {
+          setLoading(false);
         });
       }
 
@@ -47,7 +54,8 @@ export default function Detail(props) {
       function delteOrder(cb) {
         app.firestore().collection('orders')
           .doc(props.match.params.orderId)
-          .delete().then(() => cb())
+          .delete()
+          .then(() => cb())
           .catch((err) => {
             console.error(err);
           });

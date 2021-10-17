@@ -49,6 +49,13 @@ export default function List(props) {
         const items = [];
         querySnapshot.forEach((doc) => {
             let _item = doc.data();
+            if(_item.orderStatus.includes('Close')) {
+              app.firestore().collection("ordersClosed")
+              .add(_item)
+              .then(() => {
+                app.firestore().collection('orders').doc(doc.id).delete()
+              })
+            }
             _item.id = doc.id;
             items.push(_item);
         });
@@ -147,8 +154,10 @@ export default function List(props) {
                             <td>{order.orderStatus}</td>
                         </tr>
                     )
-                    else
-                    return null
+                    else {
+                      // moveOrderToClose(order)
+                      return null
+                    }
                 })}
             </tbody>
         </Table>  
