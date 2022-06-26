@@ -190,8 +190,8 @@ export default function Detail(props) {
                     disabled={!(order.nextOrderStatus === i)}
                   ></Form.Check>
                   <Form.Group as={Col}>
-                        <Form.Text>{order.orderHistory && order.orderHistory[i] ? order.orderHistory[i].updatedBy : ""}</Form.Text>
-                        <Form.Text>{order.orderHistory && order.orderHistory[i] ? order.orderHistory[i].updateDate : ""}</Form.Text>
+                        <Form.Text>{order.nextOrderStatus > i && order.orderHistory && order.orderHistory[i] ? order.orderHistory[i].updatedBy : ""}</Form.Text>
+                        <Form.Text>{order.nextOrderStatus > i && order.orderHistory && order.orderHistory[i] ? order.orderHistory[i].updateDate : ""}</Form.Text>
                   </Form.Group>
                   </Form.Group>
                     )
