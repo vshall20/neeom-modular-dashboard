@@ -119,6 +119,15 @@ export default function List(props) {
     // eslint-disable-next-line
   }, []);
 
+  function getOrderAge(_date) {
+    var dateParts = _date.split("-");
+    var dateObject = new Date(+dateParts[2], dateParts[1] - 1, +dateParts[0]); 
+    let today = new Date()
+    const diffTime = Math.abs(today - dateObject);
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
+    console.log({dateObject, today, diffDays});
+    return `${diffDays} days`
+  }
   return (
     <div>
         <InputGroup className="mb-3">
@@ -141,6 +150,7 @@ export default function List(props) {
                 <th>OrderId</th>
                 <th>PartyId</th>
                 <th>Date</th>
+                <th>Order Age</th>
                 <th>Status</th>
                 </tr>
             </thead>
@@ -152,6 +162,7 @@ export default function List(props) {
                             <td><Link to={`/detail/${order.id}`}>{order.orderId}</Link></td>
                             <td>{order.partyId}</td>
                             <td>{order.orderDate}</td>
+                            <td>{getOrderAge(order.orderDate)}</td>
                             <td>{order.orderStatus}</td>
                         </tr>
                     )
