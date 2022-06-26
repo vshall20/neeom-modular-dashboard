@@ -9,12 +9,14 @@ export function useAuth() {
 
 export function AuthProvider({ children }) {
   const [currentUser, setCurrentUser] = useState();
-  const [isAdmin, setIsAdmin] = useState(true);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [isManager, setIsManager] = useState(false);
   const [loading, setLoading] = useState(true);
 
   function adminEmails() {
     return ['vishal@neeommodular.com','chirag@neeommodular.com','office@neeommodular.com','admin@neeommodular.com'];
   }
+
 
   function signup(email, password) {
     // return auth.createUserWithEmailAndPassword(email, password)
@@ -44,7 +46,9 @@ export function AuthProvider({ children }) {
     const unsubscribe = auth.onAuthStateChanged(user => {
       setCurrentUser(user)
       let isAdmin = user ? adminEmails().includes(user.email) : false;
+      let isManager = user ? user.email.match('manager[0-9]+@neeommodular.com').length == 1 : false;
       setIsAdmin(isAdmin);
+      setIsManager(isManager)
       setLoading(false)
     })
 
@@ -54,6 +58,7 @@ export function AuthProvider({ children }) {
   const value = {
     currentUser,
     isAdmin,
+    isManager,
     login,
     logout,
     resetPassword,

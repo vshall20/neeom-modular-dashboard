@@ -13,7 +13,7 @@ export default function Detail(props) {
     const [isChecked, setIsChecked] = useState(false);
     const [loading, setLoading] = useState(false);
     const history = useHistory();
-    const {currentUser, isAdmin} = useAuth();
+    const {currentUser, isAdmin, isManager} = useAuth();
 
     async function getAllStatus() {
         const snapshot = await app.firestore().collection("statusType").get();
@@ -64,6 +64,19 @@ export default function Detail(props) {
       // EDIT FUNCTION
       function editOrder(updatedOrder) {
         setLoading();
+        let oh = updatedOrder.orderHistory[updatedOrder.orderHistory.length - 1];
+        app.firestore().collection("orderHistory")
+          .add({
+            orderId: updatedOrder.orderId,
+            orderSqFt: updatedOrder.orderSqFt,
+            ...oh,
+          })
+          .then(function () {
+            console.log("Document successfully written to OrderHistory..!");
+          })
+          .catch(e => {
+            console.error(e);
+          })
         app.firestore().collection('orders')
           .doc(props.match.params.orderId)
           .update(updatedOrder).then(() => getOrder())

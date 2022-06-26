@@ -20,6 +20,7 @@ export default function Dashboard(props) {
   const [statusOrders, setStatusOrders] = useState([]);
   const [statusOrdersSum, setStatusOrdersSum] = useState([]);
   const [initOrderList, setInitOrderList] = useState([]);
+  const [initOrderHistoryList, setInitOrderHistoryList] = useState([]);
   const [loading, setLoading] = useState(false);
   const [date, setDate] = useState(getToday());
   const [error, setError] = useState("")
@@ -49,6 +50,16 @@ export default function Dashboard(props) {
     //.limit(3)
     app.firestore().collection('orders').where('orderStatus', '!=', 'Order Close').onSnapshot((querySnapshot) => handleSnapshotData(querySnapshot));
   }
+
+  function getOrderHistory() {
+    setLoading(true);
+    //.where('owner', '==', currentUserId)
+    //.where('orderStatus', '!=', 'Order Close') // does not need index
+    //.where('score', '<=', 10)    // needs index
+    //.orderBy('owner', 'asc')
+    //.limit(3)
+    app.firestore().collection('orderHistory').where('updatedTo', '!=', 'Order Close').onSnapshot((querySnapshot) => handleHistorySnapshotData(querySnapshot));
+  }
   
   function handleSnapshotData(querySnapshot) {
     const items = [];
@@ -65,17 +76,33 @@ export default function Dashboard(props) {
       }
   }
 
+  function handleHistorySnapshotData(querySnapshot) {
+    const items = [];
+      querySnapshot.forEach((doc) => {
+        let _item = doc.data();
+        _item.id = doc.id;
+        items.push(_item);
+      });
+      console.log("Dashboard:: Item Length:", items.length);
+      if (items.length > 0) {
+        setInitOrderHistoryList(items);
+        console.log("ssetting itm and calling calculate::: ", items.length, initOrderHistoryList.length);
+        setLoading(false);
+      }
+  }
+
 
   useEffect(() => {
     console.log(getToday());
     getOrders();
+    getOrderHistory();
     // eslint-disable-next-line
   }, []);
 
   useEffect(() => {
     calculate();
     calculateSum(getDateFromString(new Date()));
-  }, [initOrderList]);
+  }, [initOrderHistoryList]);
 
   function handleDateChange(e) {
     let date = getDateFromString(e.target.value);
@@ -84,11 +111,12 @@ export default function Dashboard(props) {
   }
 
   function calculateSum(date) {
-    let orderByStatus = _.groupBy(initOrderList, 'orderStatus');
+    let orderByStatus = _.groupBy(initOrderHistoryList, 'updatedTo');
     let statusSum = {};
+    console.log(orderByStatus);
     Object.keys(orderByStatus).map(status => {
       let sumSqft = orderByStatus[status].reduce((sum, o) => {
-        let orderDate = o.orderHistory ? o.orderHistory[o.orderHistory.length - 1].updateDate : o.orderDate;
+        let orderDate = o.updateDate;
         console.log(o.orderId,o.orderSqFt, orderDate);
         if(orderDate === date) {
           return sum + (parseFloat(o.orderSqFt) || 0)
@@ -125,7 +153,7 @@ export default function Dashboard(props) {
       </Card>
       <div className="d-flex flex-wrap justify-content-around flex-fill">
       {Object.entries(pendingOrders).map(order => (
-          <Card className="" key={order.id}>
+          <Card className="mb-2 w-25" key={order.id}>
               <Card.Header><Link to={`/list/orderType=${encodeURIComponent(order[0])}`}>{order[0]}</Link></Card.Header>
               <Card.Body>{order[1]}</Card.Body>
           </Card>
@@ -141,7 +169,7 @@ export default function Dashboard(props) {
       </Card>
       <div className="d-flex flex-wrap justify-content-around flex-fill">
       {Object.entries(statusOrders).map(order => (
-          <Card className="" key={order.id}>
+          <Card className="mb-2 w-25" key={order.id}>
               <Card.Header><Link to={`/list/orderStatus=${order[0]}`}>{order[0]}</Link></Card.Header>
               <Card.Body>{order[1]}</Card.Body>
           </Card>
@@ -159,7 +187,7 @@ export default function Dashboard(props) {
       </Card>
       <div className="d-flex flex-wrap justify-content-around flex-fill">
       {Object.entries(statusOrdersSum).map(order => (
-          <Card className="" key={order.id}>
+          <Card className="mb-2 w-25" key={order.id}>
               <Card.Header><Link to={`/list/orderStatus=${order[0]}`}>{order[0]}</Link></Card.Header>
               <Card.Body>{order[1]}</Card.Body>
           </Card>

@@ -12,6 +12,7 @@ import Header from "./Header"
 import PrivateRoute from "./PrivateRoute"
 import Detail from "./Detail"
 import AdminRoute from "./AdminRoute"
+import ManagerRoute from "./ManagerRoute"
 // import ForgotPassword from "./ForgotPassword"
 // import UpdateProfile from "./UpdateProfile"
 
@@ -30,7 +31,7 @@ function App() {
             <Switch>
               <AdminRoute exact path="/" component={List} />
               <PrivateRoute exact path="/list/:filter" component={List} />
-              <AdminRoute exact path="/dashboard" component={Dashboard} />
+              <ManagerRoute exact path="/dashboard" component={Dashboard} />
               <AdminRoute exact path="/add" component={Add} />
               <PrivateRoute exact path="/records" component={UserList} />
               <PrivateRoute path="/detail/:orderId" component={Detail} />

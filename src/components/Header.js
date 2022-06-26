@@ -9,9 +9,10 @@ import { useAuth } from "../contexts/AuthContext"
 export default function Header() {
 
     const [error, setError] = useState("")
-    const { currentUser, isAdmin, logout } = useAuth()
+    const { currentUser, isAdmin, isManager, logout } = useAuth()
     const history = useHistory()
 
+    console.log({currentUser, isAdmin, isManager})
     async function handleLogout() {
         setError("")
     
@@ -41,7 +42,7 @@ export default function Header() {
     {/* "NavLink" here since "active" class styling is needed */}
     {/* <Nav.Link as={NavLink} to='/' exact>Orders</Nav.Link> */}
     {isAdmin && <Nav.Link as={NavLink} to='/add'>Add</Nav.Link>}
-    {isAdmin && <Nav.Link as={NavLink} to='/dashboard'>Dashboard</Nav.Link>}
+    {(isAdmin || isManager) && <Nav.Link as={NavLink} to='/dashboard'>Dashboard</Nav.Link>}
     {/* <Nav.Link as={NavLink} to='/add'>Add</Nav.Link> */}
     {/* <Nav.Link as={NavLink} to='/scan'>Scan</Nav.Link> */}
     <Nav.Link as={Link} eventKey="logout" onSelect={handleSelect}>Logout</Nav.Link>

@@ -47,6 +47,8 @@
     console.log("SelectedArea::", selectedArea);
     console.log("CurrentUser::", currentUser.email);
 
+    let orderHistory = [{updatedBy: currentUser.email, updatedTo:orderStatus, updateDate: data.formOrderDate}]
+
     app.firestore().collection("orders")
       .add({
         orderId: data.formOrderId,
@@ -58,7 +60,8 @@
         nextOrderStatus: 0,
         orderArea: selectedArea,
         orderSqFt: data.formOrderSqFt,
-        createdBy: currentUser.email
+        createdBy: currentUser.email,
+        orderHistory: orderHistory
       })
       .then(function() {
         console.log("Document successfully written!");
@@ -76,6 +79,19 @@
           setError(null)
         }, 2000);
       })
+      let oh = orderHistory[0];
+        app.firestore().collection("orderHistory")
+          .add({
+            orderId: data.formOrderId,
+            orderSqFt: data.formOrderSqFt,
+            ...oh,
+          })
+          .then(function () {
+            console.log("Document successfully written to OrderHistory..!");
+          })
+          .catch(e => {
+            console.error(e);
+          })
   }
 
   function handleOnChange(e) {
