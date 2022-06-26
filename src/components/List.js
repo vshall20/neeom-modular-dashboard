@@ -125,7 +125,6 @@ export default function List(props) {
     let today = new Date()
     const diffTime = Math.abs(today - dateObject);
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
-    console.log({dateObject, today, diffDays});
     return `${diffDays} days`
   }
   return (

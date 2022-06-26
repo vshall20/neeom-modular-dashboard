@@ -71,6 +71,15 @@ export default function UserList(props) {
     }); 
   }
 
+  function getOrderAge(_date) {
+    var dateParts = _date.split("-");
+    var dateObject = new Date(+dateParts[2], dateParts[1] - 1, +dateParts[0]); 
+    let today = new Date()
+    const diffTime = Math.abs(today - dateObject);
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
+    return `${diffDays} days`
+  }
+
   useEffect(() => {
     console.log(props.match.params);
     Object.keys(props.match.params).length > 0 ? getOrdersByOrderType(props.match.params.filter) : getOrders();
@@ -96,6 +105,7 @@ export default function UserList(props) {
                 <th>OrderId</th>
                 <th>PartyId</th>
                 <th>Date</th>
+                <th>Order Age</th>
                 <th>Status</th>
                 </tr>
             </thead>
@@ -107,6 +117,7 @@ export default function UserList(props) {
                             <td><Link to={`/detail/${order.id}`}>{order.orderId}</Link></td>
                             <td>{order.partyId}</td>
                             <td>{order.orderDate}</td>
+                            <td>{getOrderAge(order.orderDate)}</td>
                             <td>{order.orderStatus}</td>
                         </tr>
                     )
