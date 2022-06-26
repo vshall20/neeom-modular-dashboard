@@ -68,10 +68,10 @@ export default function Dashboard(props) {
         _item.id = doc.id;
         items.push(_item);
       });
-      console.log("Dashboard:: Item Length:", items.length);
+      // console.log("Dashboard:: Item Length:", items.length);
       if (items.length > 0) {
         setInitOrderList(items);
-        console.log("ssetting itm and calling calculate::: ", items.length, initOrderList.length);
+        // console.log("ssetting itm and calling calculate::: ", items.length, initOrderList.length);
         setLoading(false);
       }
   }
@@ -83,10 +83,10 @@ export default function Dashboard(props) {
         _item.id = doc.id;
         items.push(_item);
       });
-      console.log("Dashboard:: Item Length:", items.length);
+      // console.log("Dashboard:: Item Length:", items.length);
       if (items.length > 0) {
         setInitOrderHistoryList(items);
-        console.log("ssetting itm and calling calculate::: ", items.length, initOrderHistoryList.length);
+        // console.log("ssetting itm and calling calculate::: ", items.length, initOrderHistoryList.length);
         setLoading(false);
       }
   }
@@ -113,11 +113,11 @@ export default function Dashboard(props) {
   function calculateSum(date) {
     let orderByStatus = _.groupBy(initOrderHistoryList, 'updatedTo');
     let statusSum = {};
-    console.log(orderByStatus);
+    // console.log(orderByStatus);
     Object.keys(orderByStatus).map(status => {
       let sumSqft = orderByStatus[status].reduce((sum, o) => {
         let orderDate = o.updateDate;
-        console.log(o.orderId,o.orderSqFt, orderDate);
+        // console.log(o.orderId,o.orderSqFt, orderDate);
         if(orderDate === date) {
           return sum + (parseFloat(o.orderSqFt) || 0)
         } else {
@@ -130,14 +130,14 @@ export default function Dashboard(props) {
   }
 
   function calculate() {
-    console.log("Init orderlist length::", initOrderList.length);
+    // console.log("Init orderlist length::", initOrderList.length);
     let filteredOrders = initOrderList.filter(order => order.orderStatus !== 'Order Close' && order.orderStatus !== 'Dispatch' && order.orderStatus !== 'Packed')
     let orders = _.countBy(filteredOrders, 'orderType')
     let statusOrders = _.countBy(initOrderList, 'orderStatus');
     let orderByStatus = _.groupBy(initOrderList, 'orderStatus');
     setPendingOrders(orders)
     setStatusOrders(statusOrders)
-    console.log("Orders:::", Object.entries(orders), initOrderList.length);
+    // console.log("Orders:::", Object.entries(orders), initOrderList.length);
   }
 
   return (
@@ -189,7 +189,7 @@ export default function Dashboard(props) {
       {Object.entries(statusOrdersSum).map(order => (
           <Card className="mb-2 w-25" key={order.id}>
               <Card.Header><Link to={`/list/orderStatus=${order[0]}`}>{order[0]}</Link></Card.Header>
-              <Card.Body>{order[1]}</Card.Body>
+              <Card.Body>{Number(order[1]).toFixed(2)}</Card.Body>
           </Card>
       ))}
       </div>

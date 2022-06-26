@@ -46,7 +46,9 @@ export function AuthProvider({ children }) {
     const unsubscribe = auth.onAuthStateChanged(user => {
       setCurrentUser(user)
       let isAdmin = user ? adminEmails().includes(user.email) : false;
-      let isManager = user ? user.email.match('manager[0-9]+@neeommodular.com').length == 1 : false;
+      let regexMatch = [];
+      regexMatch = user ? user.email.match('manager[0-9]+@neeommodular.com') : []
+      let isManager = regexMatch ? regexMatch.length === 1 : false;
       setIsAdmin(isAdmin);
       setIsManager(isManager)
       setLoading(false)
