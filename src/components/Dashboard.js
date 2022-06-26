@@ -17,6 +17,7 @@ let _ = require('underscore');
 
 export default function Dashboard(props) {
   const [pendingOrders, setPendingOrders] = useState([]);
+  const [pendingOrdersCount, setPendingOrdersCount] = useState(0);
   const [statusOrders, setStatusOrders] = useState([]);
   const [statusOrdersSum, setStatusOrdersSum] = useState([]);
   const [initOrderList, setInitOrderList] = useState([]);
@@ -132,6 +133,7 @@ export default function Dashboard(props) {
   function calculate() {
     // console.log("Init orderlist length::", initOrderList.length);
     let filteredOrders = initOrderList.filter(order => order.orderStatus !== 'Order Close' && order.orderStatus !== 'Dispatch' && order.orderStatus !== 'Packed')
+    setPendingOrdersCount(filteredOrders.length)
     let orders = _.countBy(filteredOrders, 'orderType')
     let statusOrders = _.countBy(initOrderList, 'orderStatus');
     let orderByStatus = _.groupBy(initOrderList, 'orderStatus');
@@ -148,7 +150,7 @@ export default function Dashboard(props) {
       <>
       <Card key="head-pending">
         <Card.Body>
-          <h2 className="text-center mb-4">Pending Orders</h2>
+          <h2 className="text-center mb-4">Pending Orders ({pendingOrdersCount})</h2>
         </Card.Body>
       </Card>
       <div className="d-flex flex-wrap justify-content-around flex-fill">
