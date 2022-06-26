@@ -49,8 +49,19 @@
 
     let orderHistory = [{updatedBy: currentUser.email, updatedTo:orderStatus, updateDate: data.formOrderDate}]
 
-    return;
-    app.firestore().collection("orders")
+
+    app.firestore().collection("orders").where('orderId',"==", data.formOrderId).get().then((doc) => {
+      console.log(doc);
+      console.log("Exists::",doc.empty);
+      if(!doc.empty) {
+        setError("Order with same orderId already exists")
+        setTimeout(() => {
+          setError(null);
+        }, 2000);
+        return;
+      } else {
+        console.log("Set");
+        app.firestore().collection("orders")
       .add({
         orderId: data.formOrderId,
         partyId: data.formPartyId,
@@ -81,18 +92,22 @@
         }, 2000);
       })
       let oh = orderHistory[0];
-        app.firestore().collection("orderHistory")
-          .add({
-            orderId: data.formOrderId,
-            orderSqFt: data.formOrderSqFt,
-            ...oh,
-          })
-          .then(function () {
-            console.log("Document successfully written to OrderHistory..!");
-          })
-          .catch(e => {
-            console.error(e);
-          })
+      app.firestore().collection("orderHistory")
+        .add({
+          orderId: data.formOrderId,
+          orderSqFt: data.formOrderSqFt,
+          ...oh,
+        })
+        .then(function () {
+          console.log("Document successfully written to OrderHistory..!");
+        })
+        .catch(e => {
+          console.error(e);
+        })
+      }
+    }).catch((error) => {
+      console.log("Error getting document:", error);
+    });
   }
 
   function handleOnChange(e) {
