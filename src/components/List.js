@@ -93,6 +93,9 @@ export default function List(props) {
         order.orderType = o.orderType;
         order.orderQuantity = o.orderQuantity;
         order.orderStatus = o.orderStatus;
+        order.orderAge = getOrderAge(o);
+        order.lastUpdateDate =
+          o.orderHistory[o.orderHistory.length - 1].updateDate;
         order.orderSqFt = o.orderSqFt;
         order.orderArea = o.orderArea;
         _orders.push(order);
