@@ -99,6 +99,7 @@ export default function UserList(props) {
             <th>PartyId</th>
             <th>Date</th>
             <th>Order Age</th>
+            <th>Last Updated On Date</th>
             <th>Status</th>
           </tr>
         </thead>
@@ -113,6 +114,12 @@ export default function UserList(props) {
                   <td>{order.partyId}</td>
                   <td>{order.orderDate}</td>
                   <td>{getOrderAge(order)}</td>
+                  <td>
+                    {
+                      order.orderHistory[order.orderHistory.length - 1]
+                        .updateDate
+                    }
+                  </td>
                   <td>{order.orderStatus}</td>
                 </tr>
               );
