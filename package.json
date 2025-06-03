@@ -18,11 +18,11 @@
     "xlsx": "^0.16.9"
   },
   "scripts": {
-    "start": "react-scripts start",
+    "start": "NODE_OPTIONS=--openssl-legacy-provider react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",
     "eject": "react-scripts eject",
-    "deploy": "npm run build && netlify deploy --prod"
+    "deploy": "NODE_OPTIONS=--openssl-legacy-provider npm run build && netlify deploy --prod"
   },
   "eslintConfig": {
     "extends": [
