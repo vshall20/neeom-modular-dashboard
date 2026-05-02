@@ -1,54 +1,101 @@
-import React, {useState} from 'react'
-import { Navbar, Nav } from "react-bootstrap";
-import { Link, NavLink, useHistory } from "react-router-dom"
-
-
-import { useAuth } from "../contexts/AuthContext"
-
+import React, { useState } from "react";
+import { Link, NavLink, useHistory } from "react-router-dom";
+import { useAuth } from "../contexts/AuthContext";
 
 export default function Header() {
+  const { currentUser, isAdmin, isManager, logout } = useAuth();
+  const history = useHistory();
+  const [open, setOpen] = useState(false);
 
-    const [error, setError] = useState("")
-    const { currentUser, isAdmin, isManager, logout } = useAuth()
-    const history = useHistory()
+  async function handleLogout() {
+    try {
+      await logout();
+      history.push("/login");
+    } catch {
+      // swallow; auth listener will handle state
+    }
+  }
 
-    console.log({currentUser, isAdmin, isManager})
-    async function handleLogout() {
-        setError("")
-    
-        try {
-          await logout()
-          history.push("/login")
-        } catch {
-          setError("Failed to log out")
-        }
-      }
+  return (
+    <header className="app-header">
+      <div className="app-header-inner">
+        <Link to="/" className="app-brand" onClick={() => setOpen(false)}>
+          <img src="/logo192.png" alt="Neeom Modular" />
+          <div className="app-brand-text">
+            <span className="app-brand-name">Neeom Modular</span>
+            <span className="app-brand-tag">Order Tracker</span>
+          </div>
+        </Link>
 
-    const handleSelect = (eventKey) => {
-        // alert(`selected ${eventKey}`)
-        handleLogout()
-    };
+        {currentUser && (
+          <>
+            <button
+              className="nav-toggle"
+              aria-label="Toggle navigation"
+              onClick={() => setOpen((o) => !o)}
+            >
+              <span></span>
+              <span></span>
+              <span></span>
+            </button>
 
-    
-    return (
-        <div>
-            <Navbar bg="light">
-  {/* "Link" in brand component since just redirect is needed */}
-  <Navbar.Brand as={Link} to='/'>
-    <img src="/logo192.png" width='30px'></img>
-  </Navbar.Brand>
-  {
-  currentUser && <Nav>
-    {/* "NavLink" here since "active" class styling is needed */}
-    {/* <Nav.Link as={NavLink} to='/' exact>Orders</Nav.Link> */}
-    {isAdmin && <Nav.Link as={NavLink} to='/add'>Add</Nav.Link>}
-    {(isAdmin || isManager) && <Nav.Link as={NavLink} to='/dashboard'>Dashboard</Nav.Link>}
-    {/* <Nav.Link as={NavLink} to='/add'>Add</Nav.Link> */}
-    {/* <Nav.Link as={NavLink} to='/scan'>Scan</Nav.Link> */}
-    <Nav.Link as={Link} eventKey="logout" onSelect={handleSelect}>Logout</Nav.Link>
-  </Nav>
-}
-</Navbar>
-        </div>
-    )
+            <nav className={`app-nav${open ? " open" : ""}`}>
+              {isAdmin && (
+                <NavLink
+                  to="/"
+                  exact
+                  className="nav-link"
+                  activeClassName="active"
+                  onClick={() => setOpen(false)}
+                >
+                  Orders
+                </NavLink>
+              )}
+              {isAdmin && (
+                <NavLink
+                  to="/add"
+                  className="nav-link"
+                  activeClassName="active"
+                  onClick={() => setOpen(false)}
+                >
+                  Add
+                </NavLink>
+              )}
+              {(isAdmin || isManager) && (
+                <NavLink
+                  to="/dashboard"
+                  className="nav-link"
+                  activeClassName="active"
+                  onClick={() => setOpen(false)}
+                >
+                  Dashboard
+                </NavLink>
+              )}
+              {!isAdmin && !isManager && (
+                <NavLink
+                  to="/records"
+                  className="nav-link"
+                  activeClassName="active"
+                  onClick={() => setOpen(false)}
+                >
+                  Lookup
+                </NavLink>
+              )}
+              <button
+                type="button"
+                className="nav-link logout"
+                onClick={() => {
+                  setOpen(false);
+                  handleLogout();
+                }}
+                style={{ background: "none", border: "none", cursor: "pointer" }}
+              >
+                Logout
+              </button>
+            </nav>
+          </>
+        )}
+      </div>
+    </header>
+  );
 }

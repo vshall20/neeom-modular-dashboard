@@ -1,34 +1,39 @@
 import React, { useState, useEffect } from "react";
-import { Table, InputGroup, FormControl, Button } from "react-bootstrap";
 import { Link } from "react-router-dom";
 import app from "../firebase";
 import XLSX from "xlsx";
-import { getOrderAge } from "./utils";
+import { getOrderAge, getStatusClass } from "./utils";
+
+function decodeFilterLabel(filter) {
+  if (!filter) return null;
+  const [key, val] = filter.split("=");
+  const decoded = decodeURIComponent(val || "");
+  if (key === "orderType") return `Order Type · ${decoded}`;
+  if (key === "orderStatus") return `Status · ${decoded}`;
+  return decoded;
+}
 
 export default function List(props) {
   const [orderList, setOrderList] = useState([]);
   const [initOrderList, setInitOrderList] = useState([]);
   const [loading, setLoading] = useState(false);
-  //   const [error, setError] = useState("")
+  const [search, setSearch] = useState("");
 
   function handleSearch(e) {
-    console.log(e.target.value);
-    let value = e.target.value;
-    if (value === null || value === "") {
+    const value = e.target.value;
+    setSearch(value);
+    if (!value) {
       setOrderList(initOrderList);
-    } else {
-      const newArray = initOrderList.filter((o) => {
-        return Object.keys(o).some((k) => {
-          let val = o[k];
-          return String(val).toLowerCase().includes(value.toLowerCase());
-        });
-      });
-      //   console.log("newArray:", newArray)
-      setOrderList([...newArray]);
+      return;
     }
+    const newArray = initOrderList.filter((o) =>
+      Object.keys(o).some((k) =>
+        String(o[k]).toLowerCase().includes(value.toLowerCase())
+      )
+    );
+    setOrderList([...newArray]);
   }
 
-  //REALTIME GET FUNCTION
   function getOrders() {
     setLoading(true);
     return app
@@ -75,38 +80,29 @@ export default function List(props) {
   }
 
   function downloadToCSV() {
-    console.log("DownloadToCSV", orderList[0]);
     let _orders = [];
-    orderList.map((o) => {
-      let order = {};
-      if (!o.orderStatus.includes("Close")) {
-        order.orderDate = o.orderDate;
-        order.orderId = o.orderId;
-        order.partyId = o.partyId;
-        order.orderType = o.orderType;
-        order.orderQuantity = o.orderQuantity;
-        order.orderStatus = o.orderStatus;
-        order.orderAge = getOrderAge(o);
-        order.lastUpdateDate =
-          o.orderHistory[o.orderHistory.length - 1].updateDate;
-        order.orderSqFt = o.orderSqFt;
-        order.orderArea = o.orderArea;
-        _orders.push(order);
-      }
+    orderList.forEach((o) => {
+      if (o.orderStatus.includes("Close")) return;
+      _orders.push({
+        orderDate: o.orderDate,
+        orderId: o.orderId,
+        partyId: o.partyId,
+        orderType: o.orderType,
+        orderQuantity: o.orderQuantity,
+        orderStatus: o.orderStatus,
+        orderAge: getOrderAge(o),
+        lastUpdateDate:
+          o.orderHistory && o.orderHistory.length
+            ? o.orderHistory[o.orderHistory.length - 1].updateDate
+            : "",
+        orderSqFt: o.orderSqFt,
+        orderArea: o.orderArea,
+      });
     });
-    var ws = XLSX.utils.json_to_sheet(_orders);
-    var wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.json_to_sheet(_orders);
+    const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Orders");
-    const wbout = XLSX.write(wb, {
-      type: "base64",
-      bookType: "xlsx",
-    });
     XLSX.writeFile(wb, "orderList.xlsx");
-    // const uri = FileSystem.cacheDirectory + 'Orders.xlsx';
-    // console.log(`Writing to ${JSON.stringify(uri)} with text: ${wbout}`);
-    // await FileSystem.writeAsStringAsync(uri, wbout, {
-    //   encoding: FileSystem.EncodingType.Base64
-    // });
   }
 
   useEffect(() => {
@@ -118,58 +114,104 @@ export default function List(props) {
     // eslint-disable-next-line
   }, []);
 
+  const filterLabel = decodeFilterLabel(props.match.params.filter);
+  const visible = orderList.filter((o) => o.orderStatus !== "Order Close");
+
   return (
-    <div>
-      <InputGroup className="mb-3">
-        <InputGroup.Prepend>
-          <InputGroup.Text>Search:</InputGroup.Text>
-        </InputGroup.Prepend>
-        <FormControl placeholder="" aria-label="" onChange={handleSearch} />
-        <InputGroup.Append>
-          <Button variant="outline-secondary" onClick={downloadToCSV}>
-            Download
-          </Button>
-        </InputGroup.Append>
-      </InputGroup>
-      {loading && <div>Loading...</div>}
-      <Table striped bordered hover variant="dark" size="sm">
-        <thead>
-          <tr>
-            <th>OrderId</th>
-            <th>PartyId</th>
-            <th>Date</th>
-            <th>Order Age</th>
-            <th>Last Updated On Date</th>
-            <th>Status</th>
-          </tr>
-        </thead>
-        <tbody>
-          {orderList.map((order) => {
-            if (order.orderStatus !== "Order Close")
-              return (
-                <tr key={order.id}>
-                  <td>
-                    <Link to={`/detail/${order.id}`}>{order.orderId}</Link>
-                  </td>
-                  <td>{order.partyId}</td>
-                  <td>{order.orderDate}</td>
-                  <td>{getOrderAge(order)}</td>
-                  <td>
-                    {
-                      order.orderHistory[order.orderHistory.length - 1]
-                        .updateDate
-                    }
-                  </td>
-                  <td>{order.orderStatus}</td>
+    <div className="page">
+      <div className="page-header">
+        <div>
+          <h1 className="page-title">Orders</h1>
+          <div className="page-subtitle">
+            {filterLabel ? (
+              <>Filtered by {filterLabel} · {visible.length} match{visible.length === 1 ? "" : "es"}</>
+            ) : (
+              <>{visible.length} active order{visible.length === 1 ? "" : "s"}</>
+            )}
+          </div>
+        </div>
+        <button
+          type="button"
+          className="btn btn-app btn-outline-secondary"
+          onClick={downloadToCSV}
+          disabled={!visible.length}
+        >
+          Download Excel
+        </button>
+      </div>
+
+      <div className="toolbar">
+        <label className="toolbar-search">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="11" cy="11" r="7" />
+            <path d="m21 21-4.35-4.35" />
+          </svg>
+          <input
+            type="search"
+            placeholder="Search by order id, party, status…"
+            value={search}
+            onChange={handleSearch}
+          />
+        </label>
+      </div>
+
+      {loading && (
+        <div className="empty-state">
+          <span className="spinner-inline">Loading orders…</span>
+        </div>
+      )}
+
+      {!loading && !visible.length && (
+        <div className="empty-state">
+          <div className="empty-state-title">No orders found</div>
+          <div>{search ? "Try a different search." : "There are no active orders right now."}</div>
+        </div>
+      )}
+
+      {!loading && !!visible.length && (
+        <div className="table-card">
+          <div className="table-scroll">
+            <table className="table app-table">
+              <thead>
+                <tr>
+                  <th>Order ID</th>
+                  <th>Party</th>
+                  <th>Type</th>
+                  <th>Order Date</th>
+                  <th>Last Updated</th>
+                  <th>Age</th>
+                  <th>Status</th>
                 </tr>
-              );
-            else {
-              // moveOrderToClose(order)
-              return null;
-            }
-          })}
-        </tbody>
-      </Table>
+              </thead>
+              <tbody>
+                {visible.map((order) => (
+                  <tr key={order.id}>
+                    <td data-label="Order ID">
+                      <Link to={`/detail/${order.id}`} className="order-id-link">
+                        {order.orderId}
+                      </Link>
+                    </td>
+                    <td data-label="Party">{order.partyId}</td>
+                    <td data-label="Type" className="muted">{order.orderType}</td>
+                    <td data-label="Order Date" className="text-tnum">{order.orderDate}</td>
+                    <td data-label="Last Updated" className="text-tnum muted">
+                      {order.orderHistory && order.orderHistory.length
+                        ? order.orderHistory[order.orderHistory.length - 1].updateDate
+                        : "—"}
+                    </td>
+                    <td data-label="Age" className="text-tnum muted">{getOrderAge(order)}</td>
+                    <td data-label="Status">
+                      <span className={`status-pill ${getStatusClass(order.orderStatus)}`}>
+                        {order.orderStatus}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

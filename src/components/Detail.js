@@ -1,72 +1,66 @@
 import React, { useState, useEffect } from "react";
-import app from "../firebase";
-import { Form, Button, Container, Row, Col } from "react-bootstrap";
+import { Button } from "react-bootstrap";
 import { useHistory } from "react-router-dom";
+import app from "../firebase";
 import { useAuth } from "../contexts/AuthContext";
 import { getStatusType } from "./utils/configCache";
+import { getStatusClass } from "./utils";
+
+function getToday() {
+  const date = new Date();
+  return `${date.getDate()}-${date.getMonth() + 1}-${date.getFullYear()}`;
+}
 
 export default function Detail(props) {
   const [order, setOrder] = useState({});
   const [allStatus, setAllStatus] = useState(null);
-  const [error, setError] = useState(null);
-  const [isChecked, setIsChecked] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const history = useHistory();
-  const { currentUser, isAdmin, isManager } = useAuth();
+  const { currentUser, isAdmin } = useAuth();
 
-  async function getAllStatus() {
+  async function loadAllStatus() {
     const status = await getStatusType();
     setAllStatus(status);
   }
 
-  function getOrder() {
+  function loadOrder() {
     setLoading(true);
-    //.where('owner', '==', currentUserId)
-    //.where('title', '==', 'School1') // does not need index
-    //.where('score', '<=', 10)    // needs index
-    //.orderBy('owner', 'asc')
-    //.limit(3)
     app
       .firestore()
       .collection("orders")
       .doc(props.match.params.orderId)
       .get()
       .then((item) => {
-        if (item.exists === false) {
+        if (!item.exists) {
           history.push("/");
           return;
         }
-        const items = item.data();
-        setOrder(items);
+        setOrder(item.data());
         setLoading(false);
       })
-      .catch((e) => {
-        setLoading(false);
-      });
+      .catch(() => setLoading(false));
   }
 
   useEffect(() => {
-    getOrder();
-    getAllStatus();
+    loadOrder();
+    loadAllStatus();
     // eslint-disable-next-line
   }, []);
 
-  function delteOrder(cb) {
+  function deleteOrder(cb) {
     app
       .firestore()
       .collection("orders")
       .doc(props.match.params.orderId)
       .delete()
       .then(() => cb())
-      .catch((err) => {
-        console.error(err);
-      });
+      .catch((err) => console.error(err));
   }
 
-  // EDIT FUNCTION
-  function editOrder(updatedOrder) {
-    setLoading();
-    let oh = updatedOrder.orderHistory[updatedOrder.orderHistory.length - 1];
+  function persistAdvance(updatedOrder) {
+    setSaving(true);
+    const oh = updatedOrder.orderHistory[updatedOrder.orderHistory.length - 1];
     app
       .firestore()
       .collection("orderHistory")
@@ -75,39 +69,30 @@ export default function Detail(props) {
         orderSqFt: updatedOrder.orderSqFt,
         ...oh,
       })
-      .then(function () {
-        console.log("Document successfully written to OrderHistory..!");
-      })
-      .catch((e) => {
-        console.error(e);
-      });
+      .catch((e) => console.error(e));
     app
       .firestore()
       .collection("orders")
       .doc(props.match.params.orderId)
       .update(updatedOrder)
-      .then(() => getOrder())
+      .then(() => {
+        loadOrder();
+        setSaving(false);
+      })
       .catch((err) => {
         console.error(err);
+        setSaving(false);
       });
   }
 
-  function handleClose() {
-    console.log("Close.....");
-    history.push("/");
-  }
-
-  function getToday() {
-    let date = new Date();
-    return `${date.getDate()}-${date.getMonth() + 1}-${date.getFullYear()}`;
-  }
-
-  function handleSave() {
-    let updatedOrder = order;
-    let selectedStatus = allStatus[order.orderType][order.nextOrderStatus];
-    let orderHistory = order.orderHistory || [];
-    updatedOrder = {
-      ...updatedOrder,
+  function handleAdvance() {
+    if (saving) return;
+    if (!allStatus || !allStatus[order.orderType]) return;
+    if (order.nextOrderStatus >= allStatus[order.orderType].length) return;
+    const selectedStatus = allStatus[order.orderType][order.nextOrderStatus];
+    const orderHistory = order.orderHistory || [];
+    persistAdvance({
+      ...order,
       orderStatus: selectedStatus,
       nextOrderStatus: order.nextOrderStatus + 1,
       orderHistory: [
@@ -118,128 +103,167 @@ export default function Detail(props) {
           updateDate: getToday(),
         },
       ],
-    };
-    // console.log(order, updatedOrder);
-    editOrder(updatedOrder);
+    });
   }
 
   function handleDelete() {
-    let delete_order = window.confirm(
-      "Are you sure you want to Delete the Order?"
-    );
-    if (delete_order) delteOrder(handleClose);
+    if (window.confirm("Permanently delete this order?")) {
+      deleteOrder(() => history.push("/"));
+    }
   }
 
+  if (loading) {
+    return (
+      <div className="page">
+        <div className="empty-state">
+          <span className="spinner-inline">Loading order…</span>
+        </div>
+      </div>
+    );
+  }
+
+  const stages = allStatus && order.orderType ? allStatus[order.orderType] || [] : [];
+  const allStages = ["BOM", ...stages];
+  // BOM history is at orderHistory[0]; subsequent stage transitions at orderHistory[i+1]
+  const nextStageIndex = order.nextOrderStatus !== undefined ? order.nextOrderStatus + 1 : 1;
+  const isComplete = nextStageIndex >= allStages.length;
+  const nextStageName = !isComplete ? allStages[nextStageIndex] : null;
+
   return (
-    <div>
-      <Container>
-        <Form>
-          <Form.Group as={Row} controlId="formOrderId">
-            <Form.Label sm="2">Order Id</Form.Label>
-            <Form.Text sm="10" className="text-muted pl-3">
-              {order.orderId}
-            </Form.Text>
-          </Form.Group>
-
-          <Form.Group as={Row} controlId="formPartyId">
-            <Form.Label sm="2">Party Id</Form.Label>
-            <Form.Text sm="10" className="text-muted pl-3">
-              {order.partyId}
-            </Form.Text>
-          </Form.Group>
-
-          <Form.Group as={Row} controlId="formOrderType">
-            <Form.Label sm="2">Order Type</Form.Label>
-            <Form.Text sm="10" className="text-muted pl-3">
-              {order.orderType}
-            </Form.Text>
-          </Form.Group>
-
-          <Form.Group as={Row} controlId="formOrderQuantity">
-            <Form.Label sm="2">Order Quantity</Form.Label>
-            <Form.Text sm="10" className="text-muted pl-3">
-              {order.orderQuantity}
-            </Form.Text>
-          </Form.Group>
-
-          <Form.Group as={Row} controlId="formOrderDate">
-            <Form.Label sm="2">Order Date</Form.Label>
-            <Form.Text sm="10" className="text-muted pl-3">
-              {order.orderDate}
-            </Form.Text>
-          </Form.Group>
-
-          <Form.Group as={Row} controlId="formOrderCreatedBy">
-            <Form.Label sm="2">Order Created By</Form.Label>
-            <Form.Text sm="10" className="text-muted pl-3">
-              {order.createdBy}
-            </Form.Text>
-          </Form.Group>
-
-          <Form.Group as={Row} controlId="formOrderCurrentStatus">
-            <Form.Label sm="2">Current Order Status</Form.Label>
-            <Form.Text sm="10" className="text-muted pl-3">
+    <div className="page">
+      <div className="page-header">
+        <div>
+          <h1 className="page-title">{order.orderId || "Order"}</h1>
+          <div className="page-subtitle">
+            {order.orderType} · Party {order.partyId}
+            {" · "}
+            <span className={`status-pill ${getStatusClass(order.orderStatus)}`} style={{ marginLeft: 6 }}>
               {order.orderStatus}
-            </Form.Text>
-          </Form.Group>
+            </span>
+          </div>
+        </div>
+        <Button
+          variant="outline-secondary"
+          className="btn-app btn-outline-secondary"
+          onClick={() => history.push("/")}
+        >
+          Back
+        </Button>
+      </div>
 
-          <Form.Group as={Row} controlId="formBasicCheckbox">
-            {/* <Form.Check type="checkbox" label="Check me out" /> */}
+      <div className="detail-card">
+        <div className="detail-grid">
+          <div className="detail-field">
+            <div className="detail-field-label">Order ID</div>
+            <div className="detail-field-value">{order.orderId}</div>
+          </div>
+          <div className="detail-field">
+            <div className="detail-field-label">Party</div>
+            <div className="detail-field-value">{order.partyId || "—"}</div>
+          </div>
+          <div className="detail-field">
+            <div className="detail-field-label">Order Type</div>
+            <div className="detail-field-value">{order.orderType}</div>
+          </div>
+          <div className="detail-field">
+            <div className="detail-field-label">Quantity</div>
+            <div className="detail-field-value">{order.orderQuantity || "—"}</div>
+          </div>
+          <div className="detail-field">
+            <div className="detail-field-label">SqFt</div>
+            <div className="detail-field-value">{order.orderSqFt || "—"}</div>
+          </div>
+          <div className="detail-field">
+            <div className="detail-field-label">Area</div>
+            <div className="detail-field-value">{order.orderArea || "—"}</div>
+          </div>
+          <div className="detail-field">
+            <div className="detail-field-label">Order Date</div>
+            <div className="detail-field-value">{order.orderDate}</div>
+          </div>
+          <div className="detail-field">
+            <div className="detail-field-label">Created By</div>
+            <div className="detail-field-value" style={{ fontSize: 13 }}>{order.createdBy}</div>
+          </div>
+        </div>
 
-            <Form.Check label="BOM" checked={true} disabled={true}></Form.Check>
-            <Form.Group as={Col}>
-              <Form.Text>{order.createdBy}</Form.Text>
-              <Form.Text>{order.orderDate}</Form.Text>
-            </Form.Group>
-          </Form.Group>
-
-          {allStatus &&
-            allStatus[order.orderType].map((status, i) => {
-              return (
-                <Form.Group as={Row} controlId={`formBasicCheckbox-${i}`}>
-                  <Form.Check
-                    label={status}
-                    defaultChecked={order.nextOrderStatus > i}
-                    disabled={!(order.nextOrderStatus === i)}
-                  ></Form.Check>
-                  <Form.Group as={Col}>
-                    <Form.Text>
-                      {order.nextOrderStatus > i &&
-                      order.orderHistory &&
-                      order.orderHistory[i + 1]
-                        ? order.orderHistory[i + 1].updatedBy
-                        : ""}
-                    </Form.Text>
-                    <Form.Text>
-                      {order.nextOrderStatus > i &&
-                      order.orderHistory &&
-                      order.orderHistory[i + 1]
-                        ? order.orderHistory[i + 1].updateDate
-                        : ""}
-                    </Form.Text>
-                  </Form.Group>
-                </Form.Group>
-              );
-            })}
-
-          <Form.Group
-            className="d-flex justify-content-between"
-            controlId="formOrderCurrentStatus"
-          >
-            <Button variant="primary" onClick={handleSave}>
-              Save
+        <div className="detail-section-heading">
+          <span>Production Stages</span>
+          {!isComplete && nextStageName && (
+            <Button
+              variant="primary"
+              className="btn-app btn-primary"
+              onClick={handleAdvance}
+              disabled={saving}
+              style={{ padding: "6px 14px", fontSize: 13 }}
+            >
+              {saving ? "Saving…" : `Mark "${nextStageName}" complete`}
             </Button>
-            {isAdmin && (
-              <Button variant="danger" onClick={handleDelete}>
-                Delete
-              </Button>
-            )}
-            <Button variant="info" onClick={handleClose}>
+          )}
+          {isComplete && (
+            <span className="status-pill status-close">All stages complete</span>
+          )}
+        </div>
+
+        <div className="timeline">
+          {allStages.map((stage, i) => {
+            const isDone = i < nextStageIndex;
+            const isCurrent = !isDone && !isComplete && i === nextStageIndex;
+            const historyEntry = order.orderHistory && order.orderHistory[i];
+            const status = isDone ? "done" : isCurrent ? "current" : "upcoming";
+            return (
+              <div key={`${stage}-${i}`} className={`timeline-row ${status}`}>
+                <div className={`timeline-marker ${status}`}>
+                  {isDone ? "✓" : i + 1}
+                </div>
+                <div className="timeline-content">
+                  <div className="timeline-label">{stage}</div>
+                  {historyEntry && (
+                    <div className="timeline-meta">
+                      <span>{historyEntry.updateDate}</span>
+                      <span className="muted">by {historyEntry.updatedBy}</span>
+                    </div>
+                  )}
+                  {!historyEntry && isCurrent && (
+                    <div className="timeline-meta">Next stage</div>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        <div className="form-actions split" style={{ marginTop: 24 }}>
+          {isAdmin ? (
+            <Button
+              variant="danger"
+              className="btn-app btn-danger"
+              onClick={handleDelete}
+            >
+              Delete Order
+            </Button>
+          ) : <span />}
+          <div style={{ display: "flex", gap: 8 }}>
+            <Button
+              variant="outline-secondary"
+              className="btn-app btn-outline-secondary"
+              onClick={() => history.push("/")}
+            >
               Close
             </Button>
-          </Form.Group>
-        </Form>
-      </Container>
+            {!isComplete && nextStageName && (
+              <Button
+                variant="primary"
+                className="btn-app btn-primary"
+                onClick={handleAdvance}
+                disabled={saving}
+              >
+                {saving ? "Saving…" : "Save & Advance"}
+              </Button>
+            )}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

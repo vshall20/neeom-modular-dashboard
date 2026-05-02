@@ -1,220 +1,224 @@
-  import React, { useState, useEffect } from "react"
-  import { Form, Button, Container, Row } from "react-bootstrap";
-  import app from '../firebase';
-  import {
-    useAuth
-  } from "../contexts/AuthContext"
-  import { getOrderTypes, getAreas as getAreasCached } from "./utils/configCache"
-  
-  
-  export default function Add() {
-    
-    const {
-      currentUser,
-      isAdmin
-    } = useAuth()
+import React, { useState, useEffect } from "react";
+import { Form, Button } from "react-bootstrap";
+import { useHistory } from "react-router-dom";
+import app from "../firebase";
+import { useAuth } from "../contexts/AuthContext";
+import { getOrderTypes, getAreas as getAreasCached } from "./utils/configCache";
+
+export default function Add() {
+  const { currentUser, isAdmin } = useAuth();
+  const history = useHistory();
 
   const [allType, setAllType] = useState([]);
   const [allAreas, setAllAreas] = useState([]);
   const [data, setData] = useState({});
-  const [error, setError] = useState(null);
+  const [feedback, setFeedback] = useState(null); // {type:'success'|'error', message}
+  const [submitting, setSubmitting] = useState(false);
   const [selectedType, setSelectedType] = useState("");
   const [selectedArea, setSelectedArea] = useState("");
-  const orderStatus = 'BOM'
-
+  const orderStatus = "BOM";
 
   function getDateFromString(_date) {
-    let date = new Date(_date);
-    return `${date.getDate()}-${date.getMonth() + 1}-${date.getFullYear()}`
+    const date = new Date(_date);
+    return `${date.getDate()}-${date.getMonth() + 1}-${date.getFullYear()}`;
   }
 
   function resetForm() {
-    setData({})
-    document.getElementById('myForm').reset();
+    setData({});
+    const f = document.getElementById("addOrderForm");
+    if (f) f.reset();
+  }
+
+  function flashFeedback(type, message, ms = 2500) {
+    setFeedback({ type, message });
+    setTimeout(() => setFeedback(null), ms);
   }
 
   async function handleSave(e) {
     e.preventDefault();
-    if(!isAdmin){
-      setError("You do not have access.")
-      setTimeout(() => {
-        setError(null);
-      }, 2000);
+    if (!isAdmin) {
+      flashFeedback("error", "You do not have access.");
       return;
     }
-    console.log(data);
-    console.log(orderStatus);
-    console.log("SelectedType:: ",selectedType);
-    console.log("SelectedArea::", selectedArea);
-    console.log("CurrentUser::", currentUser.email);
-
-    let orderHistory = [{updatedBy: currentUser.email, updatedTo:orderStatus, updateDate: data.formOrderDate}]
-
-
-    app.firestore().collection("orders").where('orderId',"==", data.formOrderId).get().then((doc) => {
-      console.log(doc);
-      console.log("Exists::",doc.empty);
-      if(!doc.empty) {
-        setError("Order with same orderId already exists")
-        setTimeout(() => {
-          setError(null);
-        }, 2000);
+    if (!data.formOrderId || !data.formOrderDate) {
+      flashFeedback("error", "Order ID and Date are required.");
+      return;
+    }
+    setSubmitting(true);
+    const orderHistory = [
+      { updatedBy: currentUser.email, updatedTo: orderStatus, updateDate: data.formOrderDate },
+    ];
+    try {
+      const dupSnap = await app
+        .firestore()
+        .collection("orders")
+        .where("orderId", "==", data.formOrderId)
+        .get();
+      if (!dupSnap.empty) {
+        flashFeedback("error", "Order with same Order ID already exists.");
+        setSubmitting(false);
         return;
-      } else {
-        console.log("Set");
-        app.firestore().collection("orders")
-      .add({
+      }
+      await app.firestore().collection("orders").add({
         orderId: data.formOrderId,
         partyId: data.formPartyId,
         orderType: selectedType,
         orderQuantity: data.formOrderQuantity,
         orderDate: data.formOrderDate,
-        orderStatus: orderStatus,
+        orderStatus,
         nextOrderStatus: 0,
         orderArea: selectedArea,
         orderSqFt: data.formOrderSqFt,
         createdBy: currentUser.email,
-        orderHistory: orderHistory
-      })
-      .then(function() {
-        console.log("Document successfully written!");
-        setError('Data Saved Successfully')
-        resetForm(data);
-        setTimeout(() => {
-          setError(null)
-        }, 2000);
-      })
-      .catch(e => {
-        console.error(e);
-        setError('Something went wrong'+e.toString())
-        resetForm(data);
-        setTimeout(() => {
-          setError(null)
-        }, 2000);
-      })
-      let oh = orderHistory[0];
-      app.firestore().collection("orderHistory")
+        orderHistory,
+      });
+      app
+        .firestore()
+        .collection("orderHistory")
         .add({
           orderId: data.formOrderId,
           orderSqFt: data.formOrderSqFt,
-          ...oh,
+          ...orderHistory[0],
         })
-        .then(function () {
-          console.log("Document successfully written to OrderHistory..!");
-        })
-        .catch(e => {
-          console.error(e);
-        })
-      }
-    }).catch((error) => {
-      console.log("Error getting document:", error);
-    });
+        .catch((err) => console.error(err));
+      flashFeedback("success", "Order saved.");
+      resetForm();
+    } catch (err) {
+      console.error(err);
+      flashFeedback("error", `Save failed: ${err.message || err.toString()}`);
+    }
+    setSubmitting(false);
   }
 
   function handleOnChange(e) {
-    let {id, value} = e.target
-    if(id === 'formOrderDate') {
-      setData({...data, [id]:getDateFromString(value)});
+    const { id, value } = e.target;
+    if (id === "formOrderDate") {
+      setData({ ...data, [id]: getDateFromString(value) });
     } else {
-      setData({...data, [id]:value});
+      setData({ ...data, [id]: value });
     }
-  }
-
-  function handleSelect(e) {
-    setSelectedType(e.target.value);
-  }
-
-  function handleAreaSelect(e) {
-    setSelectedArea(e.target.value);
   }
 
   useEffect(() => {
-    getAllOrderType();
-    getAreas();
-    // eslint-disable-next-line
-  }, []);
-
-    async function getAllOrderType() {
+    (async () => {
       const types = await getOrderTypes();
       setAllType([...types]);
       setSelectedType(types[0]);
-    }
-
-    async function getAreas() {
       const areas = await getAreasCached();
       setAllAreas(areas);
       setSelectedArea(areas[0]);
-    }
+    })();
+  }, []);
 
-    
   return (
-    <div>
-      <Container>
-        <Form id="myForm">
-          <Form.Group as={Row} controlId="formOrderId">
-            <Form.Label sm="2">Order Id</Form.Label>
-            <Form.Control sm="10" className="pl-3" defaultValue={""} onChange={handleOnChange}>
-            </Form.Control>
-          </Form.Group>
+    <div className="page">
+      <div className="page-header">
+        <div>
+          <h1 className="page-title">New Order</h1>
+          <div className="page-subtitle">
+            Create an order. It enters at the BOM stage.
+          </div>
+        </div>
+      </div>
 
-          <Form.Group as={Row} controlId="formPartyId">
-            <Form.Label sm="2">Party Id</Form.Label>
-            <Form.Control sm="10" className="pl-3" defaultValue={""} onChange={handleOnChange}>
+      <Form id="addOrderForm" className="form-card">
+        <Form.Group controlId="formOrderId">
+          <Form.Label>Order ID</Form.Label>
+          <Form.Control
+            placeholder="e.g. AF-0852"
+            defaultValue=""
+            onChange={handleOnChange}
+            required
+          />
+        </Form.Group>
 
-            </Form.Control>
-          </Form.Group>
-          
-          <Form.Group as={Row} controlId="formOrderArea">
-            <Form.Label sm="2">Area</Form.Label>
-            {/* <Form.Control sm="10" className="pl-3" defaultValue={" "} onChange={handleOnChange}>
-            </Form.Control> */}
-            <Form.Control as='select' sm="10" className="pl-3" onChange={handleAreaSelect} defaultValue={selectedArea}>
-              {allAreas.map((a) => <option key={a} type={a}>{a}</option>)}
-            </Form.Control>
-          </Form.Group>
+        <Form.Group controlId="formPartyId">
+          <Form.Label>Party ID</Form.Label>
+          <Form.Control
+            placeholder="Customer / party reference"
+            defaultValue=""
+            onChange={handleOnChange}
+          />
+        </Form.Group>
 
-          <Form.Group as={Row} controlId="formOrderType">
-            <Form.Label sm="2">Order Type</Form.Label>
-            <Form.Control as='select' sm="10" className="pl-3" onChange={handleSelect} defaultValue={selectedType}>
-              {allType.map((t) => <option key={t} type={t}>{t}</option>)}
-            </Form.Control>
-          </Form.Group>
-
-          <Form.Group as={Row} controlId="formOrderQuantity">
-            <Form.Label sm="2">Order Quantity</Form.Label>
-            <Form.Control sm="10" className="pl-3" defaultValue={""} onChange={handleOnChange}>
-
-            </Form.Control>
-          </Form.Group>
-
-          <Form.Group as={Row} controlId="formOrderSqFt">
-            <Form.Label sm="2">SqFt</Form.Label>
-            <Form.Control sm="10" className="pl-3" defaultValue={""} onChange={handleOnChange}>
-            </Form.Control>
-          </Form.Group>
-
-
-
-          <Form.Group as={Row} controlId="formOrderDate">
-            <Form.Label sm="2">Order Date</Form.Label>
-            <Form.Control type="date" sm="10" className="pl-3" data-date-format='dd-mm-yyyy' onChange={handleOnChange}>
-
-            </Form.Control>
-          </Form.Group>
-
-
-          <Form.Group
-            className="d-flex justify-content-between"
-            controlId="formOrderCurrentStatus"
+        <Form.Group controlId="formOrderArea">
+          <Form.Label>Area</Form.Label>
+          <Form.Control
+            as="select"
+            onChange={(e) => setSelectedArea(e.target.value)}
+            defaultValue={selectedArea}
           >
-            <Button variant="primary" onClick={handleSave}>
-              Save
-            </Button>
-            
+            {allAreas.map((a) => (
+              <option key={a}>{a}</option>
+            ))}
+          </Form.Control>
+        </Form.Group>
+
+        <Form.Group controlId="formOrderType">
+          <Form.Label>Order Type</Form.Label>
+          <Form.Control
+            as="select"
+            onChange={(e) => setSelectedType(e.target.value)}
+            defaultValue={selectedType}
+          >
+            {allType.map((t) => (
+              <option key={t}>{t}</option>
+            ))}
+          </Form.Control>
+        </Form.Group>
+
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+          <Form.Group controlId="formOrderQuantity">
+            <Form.Label>Quantity</Form.Label>
+            <Form.Control
+              type="number"
+              placeholder="0"
+              defaultValue=""
+              onChange={handleOnChange}
+            />
           </Form.Group>
-        </Form>
-        {error && <h2>{error}</h2>}
-      </Container>
+
+          <Form.Group controlId="formOrderSqFt">
+            <Form.Label>SqFt</Form.Label>
+            <Form.Control
+              type="number"
+              step="0.01"
+              placeholder="0.00"
+              defaultValue=""
+              onChange={handleOnChange}
+            />
+          </Form.Group>
+        </div>
+
+        <Form.Group controlId="formOrderDate">
+          <Form.Label>Order Date</Form.Label>
+          <Form.Control type="date" onChange={handleOnChange} required />
+        </Form.Group>
+
+        <div className="form-actions">
+          <Button
+            variant="outline-secondary"
+            className="btn-app btn-outline-secondary"
+            type="button"
+            onClick={() => history.push("/")}
+            disabled={submitting}
+          >
+            Cancel
+          </Button>
+          <Button
+            variant="primary"
+            className="btn-app btn-primary"
+            onClick={handleSave}
+            disabled={submitting}
+          >
+            {submitting ? "Saving…" : "Save Order"}
+          </Button>
+        </div>
+
+        {feedback && (
+          <div className={`form-feedback ${feedback.type}`}>{feedback.message}</div>
+        )}
+      </Form>
     </div>
   );
-  }
+}

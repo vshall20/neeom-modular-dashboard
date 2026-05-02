@@ -1,36 +1,27 @@
 import React, { useState, useEffect } from "react";
-import { Table, InputGroup, FormControl } from "react-bootstrap";
 import { Link } from "react-router-dom";
 import app from "../firebase";
-import { getOrderAge } from "./utils";
+import { getOrderAge, getStatusClass } from "./utils";
 
 export default function UserList(props) {
   const [orderList, setOrderList] = useState([]);
   const [initOrderList, setInitOrderList] = useState([]);
   const [loading, setLoading] = useState(false);
-  //   const [error, setError] = useState("")
+  const [search, setSearch] = useState("");
 
   function handleSearch(e) {
-    console.log(e.target.value);
-    let value = e.target.value;
-    if (value === null || value.length < 4) {
+    const value = e.target.value;
+    setSearch(value);
+    if (!value || value.length < 4) {
       setOrderList([]);
-    } else {
-      const newArray = initOrderList.filter((o) => {
-        return Object.keys(o).some((k) => {
-          let val = o[k];
-          return (
-            k.toLocaleLowerCase() === "orderid" &&
-            String(val).toLowerCase().includes(value.toLowerCase())
-          );
-        });
-      });
-      //   console.log("newArray:", newArray)
-      setOrderList([...newArray]);
+      return;
     }
+    const newArray = initOrderList.filter((o) =>
+      String(o.orderId || "").toLowerCase().includes(value.toLowerCase())
+    );
+    setOrderList([...newArray]);
   }
 
-  //REALTIME GET FUNCTION
   function getOrders() {
     setLoading(true);
     return app
@@ -83,50 +74,97 @@ export default function UserList(props) {
     // eslint-disable-next-line
   }, []);
 
+  const visible = orderList.filter((o) => o.orderStatus !== "Order Close");
+  const showHint = !search || search.length < 4;
+
   return (
-    <div>
-      <InputGroup className="mb-3">
-        <InputGroup.Prepend>
-          <InputGroup.Text>Search:</InputGroup.Text>
-        </InputGroup.Prepend>
-        <FormControl placeholder="" aria-label="" onChange={handleSearch} />
-      </InputGroup>
-      {loading && <div>Loading...</div>}
-      <Table striped bordered hover variant="dark" size="sm">
-        <thead>
-          <tr>
-            <th>OrderId</th>
-            <th>PartyId</th>
-            <th>Date</th>
-            <th>Order Age</th>
-            <th>Last Updated On Date</th>
-            <th>Status</th>
-          </tr>
-        </thead>
-        <tbody>
-          {orderList.map((order) => {
-            if (order.orderStatus !== "Order Close")
-              return (
-                <tr key={order.id}>
-                  <td>
-                    <Link to={`/detail/${order.id}`}>{order.orderId}</Link>
-                  </td>
-                  <td>{order.partyId}</td>
-                  <td>{order.orderDate}</td>
-                  <td>{getOrderAge(order)}</td>
-                  <td>
-                    {
-                      order.orderHistory[order.orderHistory.length - 1]
-                        .updateDate
-                    }
-                  </td>
-                  <td>{order.orderStatus}</td>
+    <div className="page">
+      <div className="page-header">
+        <div>
+          <h1 className="page-title">Order Lookup</h1>
+          <div className="page-subtitle">
+            Type at least 4 characters of an order ID to search.
+          </div>
+        </div>
+      </div>
+
+      <div className="toolbar">
+        <label className="toolbar-search">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="11" cy="11" r="7" />
+            <path d="m21 21-4.35-4.35" />
+          </svg>
+          <input
+            type="search"
+            placeholder="Search order ID…"
+            value={search}
+            onChange={handleSearch}
+          />
+        </label>
+      </div>
+
+      {loading && (
+        <div className="empty-state">
+          <span className="spinner-inline">Loading orders…</span>
+        </div>
+      )}
+
+      {!loading && showHint && (
+        <div className="empty-state">
+          <div className="empty-state-title">Search to find an order</div>
+          <div>Type at least 4 characters of the order ID to see results.</div>
+        </div>
+      )}
+
+      {!loading && !showHint && !visible.length && (
+        <div className="empty-state">
+          <div className="empty-state-title">No matches</div>
+          <div>No active order matches "{search}".</div>
+        </div>
+      )}
+
+      {!loading && !!visible.length && (
+        <div className="table-card">
+          <div className="table-scroll">
+            <table className="table app-table">
+              <thead>
+                <tr>
+                  <th>Order ID</th>
+                  <th>Party</th>
+                  <th>Order Date</th>
+                  <th>Last Updated</th>
+                  <th>Age</th>
+                  <th>Status</th>
                 </tr>
-              );
-            else return null;
-          })}
-        </tbody>
-      </Table>
+              </thead>
+              <tbody>
+                {visible.map((order) => (
+                  <tr key={order.id}>
+                    <td data-label="Order ID">
+                      <Link to={`/detail/${order.id}`} className="order-id-link">
+                        {order.orderId}
+                      </Link>
+                    </td>
+                    <td data-label="Party">{order.partyId}</td>
+                    <td data-label="Order Date" className="text-tnum">{order.orderDate}</td>
+                    <td data-label="Last Updated" className="text-tnum muted">
+                      {order.orderHistory && order.orderHistory.length
+                        ? order.orderHistory[order.orderHistory.length - 1].updateDate
+                        : "—"}
+                    </td>
+                    <td data-label="Age" className="text-tnum muted">{getOrderAge(order)}</td>
+                    <td data-label="Status">
+                      <span className={`status-pill ${getStatusClass(order.orderStatus)}`}>
+                        {order.orderStatus}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
