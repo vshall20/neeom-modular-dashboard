@@ -101,11 +101,18 @@ export default function Dashboard() {
     const orderByStatus = _.groupBy(initOrderHistoryList, "updatedTo");
     const statusSum = {};
     const orderDetails = {};
+    const orderDocByOrderId = {};
+    initOrderList.forEach((o) => {
+      orderDocByOrderId[o.orderId] = o.id;
+    });
     Object.keys(orderByStatus).forEach((status) => {
       const sumSqft = orderByStatus[status].reduce((sum, o) => {
         if (o.updateDate === currentDate) {
           const details = orderDetails[status] || [];
-          orderDetails[status] = [...details, { orderId: o.orderId, id: o.id }];
+          orderDetails[status] = [
+            ...details,
+            { orderId: o.orderId, id: orderDocByOrderId[o.orderId] || null },
+          ];
           return sum + (parseFloat(o.orderSqFt) || 0);
         }
         return sum;
@@ -282,16 +289,26 @@ export default function Dashboard() {
                   )}
                   {open && (
                     <div style={{ marginTop: 10, fontSize: 13, color: "var(--text-secondary)", display: "flex", flexWrap: "wrap", gap: 6 }}>
-                      {orders.map((od) => (
-                        <Link
-                          key={od.id}
-                          to={`/detail/${od.id}`}
-                          className="status-pill status-bom"
-                          style={{ textDecoration: "none" }}
-                        >
-                          {od.orderId}
-                        </Link>
-                      ))}
+                      {orders.map((od, idx) =>
+                        od.id ? (
+                          <Link
+                            key={od.id}
+                            to={`/detail/${od.id}`}
+                            className="status-pill status-bom"
+                            style={{ textDecoration: "none" }}
+                          >
+                            {od.orderId}
+                          </Link>
+                        ) : (
+                          <span
+                            key={`${od.orderId}-${idx}`}
+                            className="status-pill status-close"
+                            title="Order is closed or no longer active"
+                          >
+                            {od.orderId}
+                          </span>
+                        )
+                      )}
                     </div>
                   )}
                 </div>
