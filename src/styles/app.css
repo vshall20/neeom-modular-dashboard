@@ -892,8 +892,38 @@ a:hover {
 @media (max-width: 768px) {
   .page { padding: 18px 14px 32px; }
   .page-title { font-size: 20px; }
-  .kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .form-card { padding: 22px 18px; }
+
+  /* Compact KPI tiles on mobile: 2 cols, tighter padding, smaller text */
+  .kpi-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+  .kpi-tile {
+    padding: 12px 14px;
+    gap: 2px;
+    min-width: 0;
+  }
+  .kpi-tile .kpi-label {
+    font-size: 10px;
+  }
+  .kpi-tile .kpi-label .status-pill {
+    font-size: 10px;
+    padding: 2px 7px;
+  }
+  .kpi-tile .kpi-value {
+    font-size: 20px;
+  }
+  .kpi-tile.kpi-summary .kpi-value {
+    font-size: 26px;
+  }
+  .kpi-tile .kpi-sub {
+    font-size: 11px;
+  }
+  /* Hero summary tile spans full width on mobile so it stands out */
+  .kpi-grid > .kpi-tile.kpi-summary {
+    grid-column: 1 / -1;
+  }
 
   /* Table → compact card layout on mobile */
   .table-scroll { overflow-x: visible; }
@@ -970,10 +1000,14 @@ a:hover {
   }
 }
 
-@media (max-width: 480px) {
+@media (max-width: 360px) {
   .kpi-grid { grid-template-columns: 1fr; }
+  .detail-grid { grid-template-columns: 1fr; }
+  .kpi-grid > .kpi-tile.kpi-summary { grid-column: auto; }
+}
+
+@media (max-width: 480px) {
   .detail-grid { grid-template-columns: 1fr 1fr; }
-  .kpi-tile.kpi-summary .kpi-value { font-size: 26px; }
 }
 
 /* Bootstrap overrides — kill leftover container alignment */
