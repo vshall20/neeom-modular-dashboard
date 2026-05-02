@@ -438,10 +438,14 @@ a:hover {
 .text-tnum { font-feature-settings: "tnum"; }
 
 /* Age coloring */
-.age-packed { color: var(--text-muted); }
-.age-fresh { color: var(--text-muted); }
-.age-warning { color: var(--warning); font-weight: 500; }
-.age-danger { color: var(--danger); font-weight: 600; }
+.table.app-table tbody td.age-packed { color: #3b82f6; font-weight: 500; }
+.table.app-table tbody td.age-fresh { color: var(--text-muted); }
+.table.app-table tbody td.age-warning { color: var(--warning); font-weight: 500; }
+.table.app-table tbody td.age-danger { color: var(--danger); font-weight: 600; }
+.age-packed { color: #3b82f6; }
+.age-warning { color: var(--warning); }
+.age-danger { color: var(--danger); }
+
 
 /* Search bar */
 .toolbar {

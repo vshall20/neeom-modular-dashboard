@@ -12,6 +12,8 @@ import PrivateRoute from "./PrivateRoute"
 import Detail from "./Detail"
 import AdminRoute from "./AdminRoute"
 import ManagerRoute from "./ManagerRoute"
+import ClosedOrders from "./ClosedOrders"
+import Maintenance from "./Maintenance"
 
 function Shell() {
   const location = useLocation()
@@ -24,6 +26,8 @@ function Shell() {
         <PrivateRoute exact path="/list/:filter" component={List} />
         <ManagerRoute exact path="/dashboard" component={Dashboard} />
         <AdminRoute exact path="/add" component={Add} />
+        <AdminRoute exact path="/closed" component={ClosedOrders} />
+        <AdminRoute exact path="/admin/maintenance" component={Maintenance} />
         <PrivateRoute exact path="/records" component={UserList} />
         <PrivateRoute path="/detail/:orderId" component={Detail} />
         <Route path="/login" component={Login} />

@@ -6,64 +6,77 @@ import { useAuth } from "../contexts/AuthContext";
 import { useOrders } from "../contexts/OrdersContext";
 import { getStatusType } from "./utils/configCache";
 import { getStatusClass } from "./utils";
+import {
+  ACTIVE_COLLECTION,
+  CLOSED_COLLECTION,
+  archiveOrder,
+  loadOrderFromEither,
+  deleteFromCollection,
+  shouldArchive,
+} from "./utils/archive";
 
 function getToday() {
   const date = new Date();
-  return `${date.getDate()}-${date.getMonth() + 1}-${date.getFullYear()}`;
+  const dd = String(date.getDate()).padStart(2, "0");
+  const mm = String(date.getMonth() + 1).padStart(2, "0");
+  return `${dd}-${mm}-${date.getFullYear()}`;
 }
 
 export default function Detail(props) {
+  const orderDocId = props.match.params.orderId;
   const { orders: contextOrders } = useOrders();
-  const cached = contextOrders.find((o) => o.id === props.match.params.orderId);
-  // contextOrders includes closed orders, so direct URLs to closed orders also seed.
+  const cached = contextOrders.find((o) => o.id === orderDocId);
   const [order, setOrder] = useState(cached || {});
+  const [source, setSource] = useState(cached ? ACTIVE_COLLECTION : null);
   const [allStatus, setAllStatus] = useState(null);
   const [loading, setLoading] = useState(!cached);
   const [saving, setSaving] = useState(false);
   const history = useHistory();
   const { currentUser, isAdmin } = useAuth();
+  const isClosed = source === CLOSED_COLLECTION;
 
   async function loadAllStatus() {
     const status = await getStatusType();
     setAllStatus(status);
   }
 
-  function loadOrder() {
+  async function loadOrder() {
     if (!cached) setLoading(true);
-    app
-      .firestore()
-      .collection("orders")
-      .doc(props.match.params.orderId)
-      .get()
-      .then((item) => {
-        if (!item.exists) {
-          history.push("/");
-          return;
-        }
-        setOrder(item.data());
-        setLoading(false);
-      })
-      .catch(() => setLoading(false));
+    try {
+      const result = await loadOrderFromEither(orderDocId);
+      if (!result) {
+        history.push("/");
+        return;
+      }
+      setOrder(result.data);
+      setSource(result.source);
+      setLoading(false);
+    } catch (err) {
+      console.error(err);
+      setLoading(false);
+    }
   }
 
   useEffect(() => {
-    if (cached) setOrder(cached);
+    if (cached) {
+      setOrder(cached);
+      setSource(ACTIVE_COLLECTION);
+    }
     loadOrder();
     loadAllStatus();
     // eslint-disable-next-line
-  }, [props.match.params.orderId]);
+  }, [orderDocId]);
 
-  function deleteOrder(cb) {
-    app
-      .firestore()
-      .collection("orders")
-      .doc(props.match.params.orderId)
-      .delete()
-      .then(() => cb())
-      .catch((err) => console.error(err));
+  async function deleteOrder(cb) {
+    try {
+      await deleteFromCollection(source || ACTIVE_COLLECTION, orderDocId);
+      cb();
+    } catch (err) {
+      console.error(err);
+    }
   }
 
-  function persistAdvance(updatedOrder) {
+  async function persistAdvance(updatedOrder) {
     setSaving(true);
     const oh = updatedOrder.orderHistory[updatedOrder.orderHistory.length - 1];
     app
@@ -75,19 +88,24 @@ export default function Detail(props) {
         ...oh,
       })
       .catch((e) => console.error(e));
-    app
-      .firestore()
-      .collection("orders")
-      .doc(props.match.params.orderId)
-      .update(updatedOrder)
-      .then(() => {
-        loadOrder();
-        setSaving(false);
-      })
-      .catch((err) => {
-        console.error(err);
-        setSaving(false);
-      });
+
+    try {
+      if (shouldArchive(updatedOrder.orderStatus)) {
+        await archiveOrder(orderDocId, updatedOrder);
+        setOrder(updatedOrder);
+        setSource(CLOSED_COLLECTION);
+      } else {
+        await app
+          .firestore()
+          .collection(ACTIVE_COLLECTION)
+          .doc(orderDocId)
+          .update(updatedOrder);
+        await loadOrder();
+      }
+    } catch (err) {
+      console.error(err);
+    }
+    setSaving(false);
   }
 
   function handleAdvance() {
@@ -145,6 +163,11 @@ export default function Detail(props) {
             <span className={`status-pill ${getStatusClass(order.orderStatus)}`} style={{ marginLeft: 6 }}>
               {order.orderStatus}
             </span>
+            {isClosed && (
+              <span className="muted" style={{ marginLeft: 8, fontSize: 12 }}>
+                (archived)
+              </span>
+            )}
           </div>
         </div>
         <Button

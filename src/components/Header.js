@@ -71,6 +71,16 @@ export default function Header() {
                   Dashboard
                 </NavLink>
               )}
+              {isAdmin && (
+                <NavLink
+                  to="/closed"
+                  className="nav-link"
+                  activeClassName="active"
+                  onClick={() => setOpen(false)}
+                >
+                  Closed Orders
+                </NavLink>
+              )}
               {!isAdmin && !isManager && (
                 <NavLink
                   to="/records"

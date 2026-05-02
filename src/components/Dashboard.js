@@ -10,12 +10,17 @@ const historyCache = new Map();
 
 function getToday() {
   const date = new Date();
-  return `${date.getDate()}-${date.getMonth() + 1}-${date.getFullYear()}`;
+  const dd = String(date.getDate()).padStart(2, "0");
+  const mm = String(date.getMonth() + 1).padStart(2, "0");
+  return `${dd}-${mm}-${date.getFullYear()}`;
 }
 
 function getDateFromString(_date) {
   const date = new Date(_date);
-  return `${date.getDate()}-${date.getMonth() + 1}-${date.getFullYear()}`;
+  if (Number.isNaN(date.getTime())) return "";
+  const dd = String(date.getDate()).padStart(2, "0");
+  const mm = String(date.getMonth() + 1).padStart(2, "0");
+  return `${dd}-${mm}-${date.getFullYear()}`;
 }
 
 function toIsoDateInputValue(date) {

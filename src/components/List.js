@@ -8,7 +8,27 @@ import {
   getStatusClass,
 } from "./utils";
 import { useOrders } from "../contexts/OrdersContext";
-import { isClosedStatus } from "../contexts/OrdersContext";
+
+function PackageIcon() {
+  return (
+    <svg
+      width="14"
+      height="14"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      style={{ verticalAlign: "-2px", marginRight: 4 }}
+      aria-label="Packed"
+    >
+      <path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z" />
+      <path d="m3.3 7 8.7 5 8.7-5" />
+      <path d="M12 22V12" />
+    </svg>
+  );
+}
 
 function decodeFilterLabel(filter) {
   if (!filter) return null;
@@ -29,7 +49,7 @@ function ageMatchesBucket(days, bucket) {
 }
 
 export default function List(props) {
-  const { orders, activeOrders, loading } = useOrders();
+  const { activeOrders, loading } = useOrders();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [ageFilter, setAgeFilter] = useState("");
@@ -43,11 +63,7 @@ export default function List(props) {
   }, [activeOrders]);
 
   const filtered = useMemo(() => {
-    // Search across ALL orders (incl closed) when there's a query;
-    // otherwise default to active orders only.
-    const base = search ? orders : activeOrders;
-
-    let result = base;
+    let result = activeOrders;
     const filter = props.match.params.filter;
     if (filter) {
       const [key, rawVal] = filter.split("=");
@@ -67,7 +83,7 @@ export default function List(props) {
       );
     }
     return result;
-  }, [orders, activeOrders, props.match.params.filter, search, statusFilter, ageFilter]);
+  }, [activeOrders, props.match.params.filter, search, statusFilter, ageFilter]);
 
   function downloadToCSV() {
     const _orders = [];
@@ -95,7 +111,6 @@ export default function List(props) {
   }
 
   const filterLabel = decodeFilterLabel(props.match.params.filter);
-  const showingClosed = filtered.some((o) => isClosedStatus(o.orderStatus));
 
   return (
     <div className="page">
@@ -106,7 +121,7 @@ export default function List(props) {
             {filterLabel ? (
               <>Filtered by {filterLabel} · {filtered.length} match{filtered.length === 1 ? "" : "es"}</>
             ) : search ? (
-              <>{filtered.length} match{filtered.length === 1 ? "" : "es"} {showingClosed && <em>(includes closed)</em>}</>
+              <>{filtered.length} match{filtered.length === 1 ? "" : "es"}</>
             ) : (
               <>{filtered.length} active order{filtered.length === 1 ? "" : "s"}</>
             )}
@@ -130,7 +145,7 @@ export default function List(props) {
           </svg>
           <input
             type="search"
-            placeholder="Search orders (incl. closed)…"
+            placeholder="Search active orders…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
@@ -160,7 +175,7 @@ export default function List(props) {
         </select>
       </div>
 
-      {loading && !orders.length && (
+      {loading && !activeOrders.length && (
         <div className="empty-state">
           <span className="spinner-inline">Loading orders…</span>
         </div>
@@ -208,7 +223,14 @@ export default function List(props) {
                           : "—"}
                       </td>
                       <td data-label="Age" className={`text-tnum ${ageClass}`}>
-                        {getOrderAge(order)}
+                        {ageDays < 0 ? (
+                          <>
+                            <PackageIcon />
+                            {Math.abs(ageDays)}d ago
+                          </>
+                        ) : (
+                          `${ageDays} days`
+                        )}
                       </td>
                       <td data-label="Status">
                         <span className={`status-pill ${getStatusClass(order.orderStatus)}`}>
