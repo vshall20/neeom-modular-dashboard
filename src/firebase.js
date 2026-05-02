@@ -13,6 +13,17 @@ const app = firebase.initializeApp({
     measurementId: "G-ZLEHXQGB5X"
 })
 
+app.firestore().enablePersistence({ synchronizeTabs: true })
+  .catch((err) => {
+    if (err.code === "failed-precondition") {
+      console.warn("Firestore persistence: multi-tab synchronization unavailable in this browser; running without offline cache.")
+    } else if (err.code === "unimplemented") {
+      console.warn("Firestore persistence: browser does not support IndexedDB; running without offline cache.")
+    } else {
+      console.warn("Firestore persistence failed:", err)
+    }
+  })
+
 export const auth = app.auth()
 
 export default app

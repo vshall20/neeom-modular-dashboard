@@ -903,7 +903,7 @@ a:hover {
   .table.app-table tbody tr {
     position: relative;
     display: block;
-    padding: 10px 96px 10px 14px;
+    padding: 10px 14px;
     border-top: 1px solid var(--border);
   }
   .table.app-table tbody tr:first-child { border-top: none; }
@@ -920,6 +920,9 @@ a:hover {
     display: block;
     font-size: 15px;
     font-weight: 600;
+    padding-right: 90px;
+    min-height: 24px;
+    line-height: 24px;
     margin-bottom: 2px;
   }
   .table.app-table tbody td[data-label="Order ID"] .order-id-link {
@@ -927,9 +930,9 @@ a:hover {
   }
   .table.app-table tbody td[data-label="Status"] {
     position: absolute;
-    top: 50%;
-    right: 12px;
-    transform: translateY(-50%);
+    top: 10px;
+    right: 14px;
+    line-height: 24px;
   }
   .table.app-table tbody td[data-label="Party"]::after,
   .table.app-table tbody td[data-label="Type"]::after {
