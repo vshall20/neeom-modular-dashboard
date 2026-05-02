@@ -11,7 +11,7 @@ export default function UserList() {
     if (!search || search.length < 4) return [];
     const q = search.toLowerCase();
     return orders
-      .filter((o) => o.orderStatus !== "Order Close")
+      .filter((o) => !String(o.orderStatus || "").toLowerCase().includes("close"))
       .filter((o) => String(o.orderId || "").toLowerCase().includes(q));
   }, [orders, search]);
 

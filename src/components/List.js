@@ -18,7 +18,9 @@ export default function List(props) {
   const [search, setSearch] = useState("");
 
   const filtered = useMemo(() => {
-    let result = orders.filter((o) => o.orderStatus !== "Order Close");
+    let result = orders.filter(
+      (o) => !String(o.orderStatus || "").toLowerCase().includes("close")
+    );
     const filter = props.match.params.filter;
     if (filter) {
       const [key, rawVal] = filter.split("=");

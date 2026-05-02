@@ -31,9 +31,14 @@ export function OrdersProvider({ children }) {
           const items = [];
           snap.forEach((doc) => {
             const item = doc.data();
+            const status = String(item.orderStatus || "").toLowerCase();
+            if (status.includes("close")) return;
             item.id = doc.id;
             items.push(item);
           });
+          items.sort((a, b) =>
+            String(b.orderId || "").localeCompare(String(a.orderId || ""))
+          );
           setOrders(items);
           setLoading(false);
         },
