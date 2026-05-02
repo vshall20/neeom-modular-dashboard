@@ -3,6 +3,7 @@ import { Button } from "react-bootstrap";
 import { useHistory } from "react-router-dom";
 import app from "../firebase";
 import { useAuth } from "../contexts/AuthContext";
+import { useOrders } from "../contexts/OrdersContext";
 import { getStatusType } from "./utils/configCache";
 import { getStatusClass } from "./utils";
 
@@ -12,9 +13,11 @@ function getToday() {
 }
 
 export default function Detail(props) {
-  const [order, setOrder] = useState({});
+  const { orders: contextOrders } = useOrders();
+  const cached = contextOrders.find((o) => o.id === props.match.params.orderId);
+  const [order, setOrder] = useState(cached || {});
   const [allStatus, setAllStatus] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!cached);
   const [saving, setSaving] = useState(false);
   const history = useHistory();
   const { currentUser, isAdmin } = useAuth();
@@ -25,7 +28,7 @@ export default function Detail(props) {
   }
 
   function loadOrder() {
-    setLoading(true);
+    if (!cached) setLoading(true);
     app
       .firestore()
       .collection("orders")
@@ -43,10 +46,11 @@ export default function Detail(props) {
   }
 
   useEffect(() => {
+    if (cached) setOrder(cached);
     loadOrder();
     loadAllStatus();
     // eslint-disable-next-line
-  }, []);
+  }, [props.match.params.orderId]);
 
   function deleteOrder(cb) {
     app

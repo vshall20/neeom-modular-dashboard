@@ -6,6 +6,8 @@ import { getStatusClass } from "./utils";
 import { useOrders } from "../contexts/OrdersContext";
 const _ = require("underscore");
 
+const historyCache = new Map();
+
 function getToday() {
   const date = new Date();
   return `${date.getDate()}-${date.getMonth() + 1}-${date.getFullYear()}`;
@@ -34,28 +36,35 @@ export default function Dashboard() {
   const [pendingOrdersCount, setPendingOrdersCount] = useState(0);
   const [statusOrders, setStatusOrders] = useState({});
   const [statusOrdersSum, setStatusOrdersSum] = useState({});
-  const [initOrderHistoryList, setInitOrderHistoryList] = useState([]);
-  const [loadingHistory, setLoadingHistory] = useState(true);
-  const [date, setDate] = useState(getToday());
+  const initialDate = getToday();
+  const [initOrderHistoryList, setInitOrderHistoryList] = useState(
+    historyCache.get(initialDate) || []
+  );
+  const [loadingHistory, setLoadingHistory] = useState(
+    !historyCache.has(initialDate)
+  );
+  const [date, setDate] = useState(initialDate);
   const [error] = useState("");
   const [showMore, setShowMore] = useState("");
   const [orderDetailsForDate, setOrderDetailsForDate] = useState({});
 
   function getOrderHistoryForDate(targetDate) {
-    setLoadingHistory(true);
+    if (!historyCache.has(targetDate)) {
+      setLoadingHistory(true);
+    }
     return app
       .firestore()
       .collection("orderHistory")
       .where("updateDate", "==", targetDate)
       .get()
-      .then((querySnapshot) => handleHistorySnapshotData(querySnapshot))
+      .then((querySnapshot) => handleHistorySnapshotData(querySnapshot, targetDate))
       .catch((e) => {
         console.error(e);
         setLoadingHistory(false);
       });
   }
 
-  function handleHistorySnapshotData(querySnapshot) {
+  function handleHistorySnapshotData(querySnapshot, targetDate) {
     const items = [];
     querySnapshot.forEach((doc) => {
       const _item = doc.data();
@@ -63,12 +72,13 @@ export default function Dashboard() {
       _item.id = doc.id;
       items.push(_item);
     });
+    historyCache.set(targetDate, items);
     setInitOrderHistoryList(items);
     setLoadingHistory(false);
   }
 
   useEffect(() => {
-    getOrderHistoryForDate(getToday());
+    getOrderHistoryForDate(initialDate);
     // eslint-disable-next-line
   }, []);
 
@@ -81,6 +91,9 @@ export default function Dashboard() {
   function handleDateChange(e) {
     const newDate = getDateFromString(e.target.value);
     setDate(newDate);
+    if (historyCache.has(newDate)) {
+      setInitOrderHistoryList(historyCache.get(newDate));
+    }
     getOrderHistoryForDate(newDate);
   }
 
