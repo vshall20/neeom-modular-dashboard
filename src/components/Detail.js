@@ -3,6 +3,7 @@ import app from "../firebase";
 import { Form, Button, Container, Row, Col } from "react-bootstrap";
 import { useHistory } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
+import { getStatusType } from "./utils/configCache";
 
 export default function Detail(props) {
   const [order, setOrder] = useState({});
@@ -14,10 +15,8 @@ export default function Detail(props) {
   const { currentUser, isAdmin, isManager } = useAuth();
 
   async function getAllStatus() {
-    const snapshot = await app.firestore().collection("statusType").get();
-    let allStatus = snapshot.docs.map((doc) => doc.data());
-    // console.log(allStatus);
-    setAllStatus(allStatus[0]);
+    const status = await getStatusType();
+    setAllStatus(status);
   }
 
   function getOrder() {

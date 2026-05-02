@@ -32,30 +32,25 @@ export default function Dashboard(props) {
 
   function getOrders() {
     setLoading(true);
-    //.where('owner', '==', currentUserId)
-    //.where('orderStatus', '!=', 'Order Close') // does not need index
-    //.where('score', '<=', 10)    // needs index
-    //.orderBy('owner', 'asc')
-    //.limit(3)
-    app
+    return app
       .firestore()
       .collection("orders")
       .where("orderStatus", "!=", "Order Close")
       .onSnapshot((querySnapshot) => handleSnapshotData(querySnapshot));
   }
 
-  function getOrderHistory() {
+  function getOrderHistoryForDate(targetDate) {
     setLoading(true);
-    //.where('owner', '==', currentUserId)
-    //.where('orderStatus', '!=', 'Order Close') // does not need index
-    //.where('score', '<=', 10)    // needs index
-    //.orderBy('owner', 'asc')
-    //.limit(3)
-    app
+    return app
       .firestore()
       .collection("orderHistory")
-      .where("updatedTo", "!=", "Order Close")
-      .onSnapshot((querySnapshot) => handleHistorySnapshotData(querySnapshot));
+      .where("updateDate", "==", targetDate)
+      .get()
+      .then((querySnapshot) => handleHistorySnapshotData(querySnapshot))
+      .catch((e) => {
+        console.error(e);
+        setLoading(false);
+      });
   }
 
   function handleSnapshotData(querySnapshot) {
@@ -65,45 +60,39 @@ export default function Dashboard(props) {
       _item.id = doc.id;
       items.push(_item);
     });
-    // console.log("Dashboard:: Item Length:", items.length);
-    if (items.length > 0) {
-      setInitOrderList(items);
-      // console.log("ssetting itm and calling calculate::: ", items.length, initOrderList.length);
-      setLoading(false);
-    }
+    setInitOrderList(items);
+    setLoading(false);
   }
 
   function handleHistorySnapshotData(querySnapshot) {
     const items = [];
     querySnapshot.forEach((doc) => {
       let _item = doc.data();
+      if (_item.updatedTo === "Order Close") return;
       _item.id = doc.id;
       items.push(_item);
     });
-    // console.log("Dashboard:: Item Length:", items.length);
-    if (items.length > 0) {
-      setInitOrderHistoryList(items);
-      // console.log("ssetting itm and calling calculate::: ", items.length, initOrderHistoryList.length);
-      setLoading(false);
-    }
+    setInitOrderHistoryList(items);
+    setLoading(false);
   }
 
   useEffect(() => {
-    // console.log(getToday());
-    getOrders();
-    getOrderHistory();
+    const unsubscribe = getOrders();
+    getOrderHistoryForDate(getToday());
+    return () => unsubscribe && unsubscribe();
     // eslint-disable-next-line
   }, []);
 
   useEffect(() => {
     calculate();
-    calculateSum(getDateFromString(new Date()));
-  }, [initOrderHistoryList]);
+    calculateSum(date);
+    // eslint-disable-next-line
+  }, [initOrderHistoryList, initOrderList]);
 
   function handleDateChange(e) {
-    let date = getDateFromString(e.target.value);
-    setDate(date);
-    calculateSum(date);
+    let newDate = getDateFromString(e.target.value);
+    setDate(newDate);
+    getOrderHistoryForDate(newDate);
   }
 
   function calculateSum(date) {

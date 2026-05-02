@@ -33,14 +33,11 @@ export default function UserList(props) {
   //REALTIME GET FUNCTION
   function getOrders() {
     setLoading(true);
-    //.where('owner', '==', currentUserId)
-    //.where('title', '==', 'School1') // does not need index
-    //.where('score', '<=', 10)    // needs index
-    //.orderBy('owner', 'asc')
-    //.limit(3)
-    app
+    return app
       .firestore()
       .collection("orders")
+      .where("orderStatus", "!=", "Order Close")
+      .orderBy("orderStatus")
       .orderBy("orderId", "desc")
       .onSnapshot((querySnapshot) => {
         const items = [];
@@ -49,7 +46,6 @@ export default function UserList(props) {
           _item.id = doc.id;
           items.push(_item);
         });
-        // setOrderList(items);
         setInitOrderList(items);
         setLoading(false);
       });
@@ -57,10 +53,14 @@ export default function UserList(props) {
 
   function getOrdersByOrderType(filter) {
     let _filter = filter.split("=");
-    app
+    let q = app
       .firestore()
       .collection("orders")
-      .where(_filter[0], "==", decodeURIComponent(_filter[1]))
+      .where(_filter[0], "==", decodeURIComponent(_filter[1]));
+    if (_filter[0] !== "orderStatus") {
+      q = q.where("orderStatus", "!=", "Order Close").orderBy("orderStatus");
+    }
+    return q
       .orderBy("orderId", "desc")
       .onSnapshot((querySnapshot) => {
         const items = [];
@@ -69,17 +69,17 @@ export default function UserList(props) {
           _item.id = doc.id;
           items.push(_item);
         });
-        //   setOrderList(items);
         setInitOrderList(items);
         setLoading(false);
       });
   }
 
   useEffect(() => {
-    console.log(props.match.params);
-    Object.keys(props.match.params).length > 0
-      ? getOrdersByOrderType(props.match.params.filter)
-      : getOrders();
+    const unsubscribe =
+      Object.keys(props.match.params).length > 0
+        ? getOrdersByOrderType(props.match.params.filter)
+        : getOrders();
+    return () => unsubscribe && unsubscribe();
     // eslint-disable-next-line
   }, []);
 

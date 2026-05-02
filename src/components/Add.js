@@ -4,6 +4,7 @@
   import {
     useAuth
   } from "../contexts/AuthContext"
+  import { getOrderTypes, getAreas as getAreasCached } from "./utils/configCache"
   
   
   export default function Add() {
@@ -24,7 +25,7 @@
 
   function getDateFromString(_date) {
     let date = new Date(_date);
-    return `${("0" + date.getDate()).slice(-2)}-${("0" + (date.getMonth() + 1)).slice(-2)}-${date.getFullYear()}`
+    return `${date.getDate()}-${date.getMonth() + 1}-${date.getFullYear()}`
   }
 
   function resetForm() {
@@ -134,19 +135,15 @@
   }, []);
 
     async function getAllOrderType() {
-      const snapshot = await app.firestore().collection("orderType").get();
-        let allTypes = snapshot.docs.map(doc => doc.data());
-        let types = [];
-        allTypes.map(type => types.push(type.value));
-        setAllType([...types]);
-        setSelectedType(types[0]);
+      const types = await getOrderTypes();
+      setAllType([...types]);
+      setSelectedType(types[0]);
     }
 
     async function getAreas() {
-      const snapshot = await app.firestore().collection("areas").get();
-        let allAreas = snapshot.docs.map(doc => doc.data());
-        setAllAreas(allAreas[0].areas);
-        setSelectedArea(allAreas[0].areas[0]);
+      const areas = await getAreasCached();
+      setAllAreas(areas);
+      setSelectedArea(areas[0]);
     }
 
     

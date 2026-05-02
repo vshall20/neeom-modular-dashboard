@@ -31,27 +31,16 @@ export default function List(props) {
   //REALTIME GET FUNCTION
   function getOrders() {
     setLoading(true);
-    //.where('owner', '==', currentUserId)
-    //.where('title', '==', 'School1') // does not need index
-    //.where('score', '<=', 10)    // needs index
-    //.orderBy('owner', 'asc')
-    //.limit(3)
-    app
+    return app
       .firestore()
       .collection("orders")
+      .where("orderStatus", "!=", "Order Close")
+      .orderBy("orderStatus")
       .orderBy("orderId", "desc")
       .onSnapshot((querySnapshot) => {
         const items = [];
         querySnapshot.forEach((doc) => {
           let _item = doc.data();
-          // if(_item.orderStatus.includes('Close')) { //&& _item.orderId.includes('Test')
-          //   app.firestore().collection("ordersClosed")
-          //   .doc(doc.id)
-          //   .set({ ..._item })
-          //   .then(() => {
-          //     app.firestore().collection('orders').doc(doc.id).delete()
-          //   })
-          // }
           _item.id = doc.id;
           items.push(_item);
         });
@@ -63,10 +52,14 @@ export default function List(props) {
 
   function getOrdersByOrderType(filter) {
     let _filter = filter.split("=");
-    app
+    let q = app
       .firestore()
       .collection("orders")
-      .where(_filter[0], "==", decodeURIComponent(_filter[1]))
+      .where(_filter[0], "==", decodeURIComponent(_filter[1]));
+    if (_filter[0] !== "orderStatus") {
+      q = q.where("orderStatus", "!=", "Order Close").orderBy("orderStatus");
+    }
+    return q
       .orderBy("orderId", "desc")
       .onSnapshot((querySnapshot) => {
         const items = [];
@@ -117,10 +110,11 @@ export default function List(props) {
   }
 
   useEffect(() => {
-    console.log(props.match.params);
-    Object.keys(props.match.params).length > 0
-      ? getOrdersByOrderType(props.match.params.filter)
-      : getOrders();
+    const unsubscribe =
+      Object.keys(props.match.params).length > 0
+        ? getOrdersByOrderType(props.match.params.filter)
+        : getOrders();
+    return () => unsubscribe && unsubscribe();
     // eslint-disable-next-line
   }, []);
 
