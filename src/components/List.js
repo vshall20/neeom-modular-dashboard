@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from "react";
+import React, { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import app from "../firebase";
 import XLSX from "xlsx";
 import { getOrderAge, getStatusClass } from "./utils";
+import { useOrders } from "../contexts/OrdersContext";
 
 function decodeFilterLabel(filter) {
   if (!filter) return null;
@@ -14,74 +14,29 @@ function decodeFilterLabel(filter) {
 }
 
 export default function List(props) {
-  const [orderList, setOrderList] = useState([]);
-  const [initOrderList, setInitOrderList] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const { orders, loading } = useOrders();
   const [search, setSearch] = useState("");
 
-  function handleSearch(e) {
-    const value = e.target.value;
-    setSearch(value);
-    if (!value) {
-      setOrderList(initOrderList);
-      return;
+  const filtered = useMemo(() => {
+    let result = orders.filter((o) => o.orderStatus !== "Order Close");
+    const filter = props.match.params.filter;
+    if (filter) {
+      const [key, rawVal] = filter.split("=");
+      const val = decodeURIComponent(rawVal || "");
+      result = result.filter((o) => String(o[key]) === val);
     }
-    const newArray = initOrderList.filter((o) =>
-      Object.keys(o).some((k) =>
-        String(o[k]).toLowerCase().includes(value.toLowerCase())
-      )
-    );
-    setOrderList([...newArray]);
-  }
-
-  function getOrders() {
-    setLoading(true);
-    return app
-      .firestore()
-      .collection("orders")
-      .where("orderStatus", "!=", "Order Close")
-      .orderBy("orderStatus")
-      .orderBy("orderId", "desc")
-      .onSnapshot((querySnapshot) => {
-        const items = [];
-        querySnapshot.forEach((doc) => {
-          let _item = doc.data();
-          _item.id = doc.id;
-          items.push(_item);
-        });
-        setOrderList(items);
-        setInitOrderList(items);
-        setLoading(false);
-      });
-  }
-
-  function getOrdersByOrderType(filter) {
-    let _filter = filter.split("=");
-    let q = app
-      .firestore()
-      .collection("orders")
-      .where(_filter[0], "==", decodeURIComponent(_filter[1]));
-    if (_filter[0] !== "orderStatus") {
-      q = q.where("orderStatus", "!=", "Order Close").orderBy("orderStatus");
+    if (search) {
+      const q = search.toLowerCase();
+      result = result.filter((o) =>
+        Object.keys(o).some((k) => String(o[k]).toLowerCase().includes(q))
+      );
     }
-    return q
-      .orderBy("orderId", "desc")
-      .onSnapshot((querySnapshot) => {
-        const items = [];
-        querySnapshot.forEach((doc) => {
-          let _item = doc.data();
-          _item.id = doc.id;
-          items.push(_item);
-        });
-        setOrderList(items);
-        setInitOrderList(items);
-        setLoading(false);
-      });
-  }
+    return result;
+  }, [orders, props.match.params.filter, search]);
 
   function downloadToCSV() {
-    let _orders = [];
-    orderList.forEach((o) => {
+    const _orders = [];
+    filtered.forEach((o) => {
       if (o.orderStatus.includes("Close")) return;
       _orders.push({
         orderDate: o.orderDate,
@@ -105,17 +60,7 @@ export default function List(props) {
     XLSX.writeFile(wb, "orderList.xlsx");
   }
 
-  useEffect(() => {
-    const unsubscribe =
-      Object.keys(props.match.params).length > 0
-        ? getOrdersByOrderType(props.match.params.filter)
-        : getOrders();
-    return () => unsubscribe && unsubscribe();
-    // eslint-disable-next-line
-  }, []);
-
   const filterLabel = decodeFilterLabel(props.match.params.filter);
-  const visible = orderList.filter((o) => o.orderStatus !== "Order Close");
 
   return (
     <div className="page">
@@ -124,9 +69,9 @@ export default function List(props) {
           <h1 className="page-title">Orders</h1>
           <div className="page-subtitle">
             {filterLabel ? (
-              <>Filtered by {filterLabel} · {visible.length} match{visible.length === 1 ? "" : "es"}</>
+              <>Filtered by {filterLabel} · {filtered.length} match{filtered.length === 1 ? "" : "es"}</>
             ) : (
-              <>{visible.length} active order{visible.length === 1 ? "" : "s"}</>
+              <>{filtered.length} active order{filtered.length === 1 ? "" : "s"}</>
             )}
           </div>
         </div>
@@ -134,7 +79,7 @@ export default function List(props) {
           type="button"
           className="btn btn-app btn-outline-secondary"
           onClick={downloadToCSV}
-          disabled={!visible.length}
+          disabled={!filtered.length}
         >
           Download Excel
         </button>
@@ -150,25 +95,25 @@ export default function List(props) {
             type="search"
             placeholder="Search by order id, party, status…"
             value={search}
-            onChange={handleSearch}
+            onChange={(e) => setSearch(e.target.value)}
           />
         </label>
       </div>
 
-      {loading && (
+      {loading && !orders.length && (
         <div className="empty-state">
           <span className="spinner-inline">Loading orders…</span>
         </div>
       )}
 
-      {!loading && !visible.length && (
+      {!loading && !filtered.length && (
         <div className="empty-state">
           <div className="empty-state-title">No orders found</div>
           <div>{search ? "Try a different search." : "There are no active orders right now."}</div>
         </div>
       )}
 
-      {!loading && !!visible.length && (
+      {!!filtered.length && (
         <div className="table-card">
           <div className="table-scroll">
             <table className="table app-table">
@@ -184,7 +129,7 @@ export default function List(props) {
                 </tr>
               </thead>
               <tbody>
-                {visible.map((order) => (
+                {filtered.map((order) => (
                   <tr key={order.id}>
                     <td data-label="Order ID">
                       <Link to={`/detail/${order.id}`} className="order-id-link">

@@ -1,80 +1,20 @@
-import React, { useState, useEffect } from "react";
+import React, { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import app from "../firebase";
 import { getOrderAge, getStatusClass } from "./utils";
+import { useOrders } from "../contexts/OrdersContext";
 
-export default function UserList(props) {
-  const [orderList, setOrderList] = useState([]);
-  const [initOrderList, setInitOrderList] = useState([]);
-  const [loading, setLoading] = useState(false);
+export default function UserList() {
+  const { orders, loading } = useOrders();
   const [search, setSearch] = useState("");
 
-  function handleSearch(e) {
-    const value = e.target.value;
-    setSearch(value);
-    if (!value || value.length < 4) {
-      setOrderList([]);
-      return;
-    }
-    const newArray = initOrderList.filter((o) =>
-      String(o.orderId || "").toLowerCase().includes(value.toLowerCase())
-    );
-    setOrderList([...newArray]);
-  }
+  const visible = useMemo(() => {
+    if (!search || search.length < 4) return [];
+    const q = search.toLowerCase();
+    return orders
+      .filter((o) => o.orderStatus !== "Order Close")
+      .filter((o) => String(o.orderId || "").toLowerCase().includes(q));
+  }, [orders, search]);
 
-  function getOrders() {
-    setLoading(true);
-    return app
-      .firestore()
-      .collection("orders")
-      .where("orderStatus", "!=", "Order Close")
-      .orderBy("orderStatus")
-      .orderBy("orderId", "desc")
-      .onSnapshot((querySnapshot) => {
-        const items = [];
-        querySnapshot.forEach((doc) => {
-          let _item = doc.data();
-          _item.id = doc.id;
-          items.push(_item);
-        });
-        setInitOrderList(items);
-        setLoading(false);
-      });
-  }
-
-  function getOrdersByOrderType(filter) {
-    let _filter = filter.split("=");
-    let q = app
-      .firestore()
-      .collection("orders")
-      .where(_filter[0], "==", decodeURIComponent(_filter[1]));
-    if (_filter[0] !== "orderStatus") {
-      q = q.where("orderStatus", "!=", "Order Close").orderBy("orderStatus");
-    }
-    return q
-      .orderBy("orderId", "desc")
-      .onSnapshot((querySnapshot) => {
-        const items = [];
-        querySnapshot.forEach((doc) => {
-          let _item = doc.data();
-          _item.id = doc.id;
-          items.push(_item);
-        });
-        setInitOrderList(items);
-        setLoading(false);
-      });
-  }
-
-  useEffect(() => {
-    const unsubscribe =
-      Object.keys(props.match.params).length > 0
-        ? getOrdersByOrderType(props.match.params.filter)
-        : getOrders();
-    return () => unsubscribe && unsubscribe();
-    // eslint-disable-next-line
-  }, []);
-
-  const visible = orderList.filter((o) => o.orderStatus !== "Order Close");
   const showHint = !search || search.length < 4;
 
   return (
@@ -98,12 +38,12 @@ export default function UserList(props) {
             type="search"
             placeholder="Search order ID…"
             value={search}
-            onChange={handleSearch}
+            onChange={(e) => setSearch(e.target.value)}
           />
         </label>
       </div>
 
-      {loading && (
+      {loading && !orders.length && (
         <div className="empty-state">
           <span className="spinner-inline">Loading orders…</span>
         </div>
@@ -123,7 +63,7 @@ export default function UserList(props) {
         </div>
       )}
 
-      {!loading && !!visible.length && (
+      {!!visible.length && (
         <div className="table-card">
           <div className="table-scroll">
             <table className="table app-table">

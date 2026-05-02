@@ -1,5 +1,6 @@
 import React from "react"
 import { AuthProvider } from "../contexts/AuthContext"
+import { OrdersProvider } from "../contexts/OrdersContext"
 import { BrowserRouter as Router, Switch, Route, useLocation } from "react-router-dom"
 import Dashboard from "./Dashboard"
 import Add from "./Add"
@@ -35,7 +36,9 @@ function App() {
   return (
     <Router>
       <AuthProvider>
-        <Shell />
+        <OrdersProvider>
+          <Shell />
+        </OrdersProvider>
       </AuthProvider>
     </Router>
   )

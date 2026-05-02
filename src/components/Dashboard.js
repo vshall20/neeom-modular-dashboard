@@ -3,6 +3,7 @@ import { Alert } from "react-bootstrap";
 import { Link } from "react-router-dom";
 import app from "../firebase";
 import { getStatusClass } from "./utils";
+import { useOrders } from "../contexts/OrdersContext";
 const _ = require("underscore");
 
 function getToday() {
@@ -28,27 +29,17 @@ function dmyToDate(dmy) {
 }
 
 export default function Dashboard() {
+  const { orders: initOrderList, loading: loadingOrders } = useOrders();
   const [pendingOrders, setPendingOrders] = useState({});
   const [pendingOrdersCount, setPendingOrdersCount] = useState(0);
   const [statusOrders, setStatusOrders] = useState({});
   const [statusOrdersSum, setStatusOrdersSum] = useState({});
-  const [initOrderList, setInitOrderList] = useState([]);
   const [initOrderHistoryList, setInitOrderHistoryList] = useState([]);
-  const [loadingOrders, setLoadingOrders] = useState(true);
   const [loadingHistory, setLoadingHistory] = useState(true);
   const [date, setDate] = useState(getToday());
   const [error] = useState("");
   const [showMore, setShowMore] = useState("");
   const [orderDetailsForDate, setOrderDetailsForDate] = useState({});
-
-  function getOrders() {
-    setLoadingOrders(true);
-    return app
-      .firestore()
-      .collection("orders")
-      .where("orderStatus", "!=", "Order Close")
-      .onSnapshot((querySnapshot) => handleSnapshotData(querySnapshot));
-  }
 
   function getOrderHistoryForDate(targetDate) {
     setLoadingHistory(true);
@@ -64,17 +55,6 @@ export default function Dashboard() {
       });
   }
 
-  function handleSnapshotData(querySnapshot) {
-    const items = [];
-    querySnapshot.forEach((doc) => {
-      const _item = doc.data();
-      _item.id = doc.id;
-      items.push(_item);
-    });
-    setInitOrderList(items);
-    setLoadingOrders(false);
-  }
-
   function handleHistorySnapshotData(querySnapshot) {
     const items = [];
     querySnapshot.forEach((doc) => {
@@ -88,9 +68,7 @@ export default function Dashboard() {
   }
 
   useEffect(() => {
-    const unsubscribe = getOrders();
     getOrderHistoryForDate(getToday());
-    return () => unsubscribe && unsubscribe();
     // eslint-disable-next-line
   }, []);
 
