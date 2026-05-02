@@ -1,8 +1,16 @@
-import React, { createContext, useContext, useEffect, useState } from "react";
+import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
 import app from "../firebase";
 import { useAuth } from "./AuthContext";
 
-const OrdersContext = createContext({ orders: [], loading: true });
+export function isClosedStatus(status) {
+  return String(status || "").toLowerCase().includes("close");
+}
+
+const OrdersContext = createContext({
+  orders: [],
+  activeOrders: [],
+  loading: true,
+});
 
 export function useOrders() {
   return useContext(OrdersContext);
@@ -23,22 +31,15 @@ export function OrdersProvider({ children }) {
     const unsubscribe = app
       .firestore()
       .collection("orders")
-      .where("orderStatus", "!=", "Order Close")
-      .orderBy("orderStatus")
       .orderBy("orderId", "desc")
       .onSnapshot(
         (snap) => {
           const items = [];
           snap.forEach((doc) => {
             const item = doc.data();
-            const status = String(item.orderStatus || "").toLowerCase();
-            if (status.includes("close")) return;
             item.id = doc.id;
             items.push(item);
           });
-          items.sort((a, b) =>
-            String(b.orderId || "").localeCompare(String(a.orderId || ""))
-          );
           setOrders(items);
           setLoading(false);
         },
@@ -50,8 +51,13 @@ export function OrdersProvider({ children }) {
     return () => unsubscribe();
   }, [currentUser]);
 
+  const activeOrders = useMemo(
+    () => orders.filter((o) => !isClosedStatus(o.orderStatus)),
+    [orders]
+  );
+
   return (
-    <OrdersContext.Provider value={{ orders, loading }}>
+    <OrdersContext.Provider value={{ orders, activeOrders, loading }}>
       {children}
     </OrdersContext.Provider>
   );

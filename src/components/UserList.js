@@ -10,9 +10,9 @@ export default function UserList() {
   const visible = useMemo(() => {
     if (!search || search.length < 4) return [];
     const q = search.toLowerCase();
-    return orders
-      .filter((o) => !String(o.orderStatus || "").toLowerCase().includes("close"))
-      .filter((o) => String(o.orderId || "").toLowerCase().includes(q));
+    return orders.filter((o) =>
+      String(o.orderId || "").toLowerCase().includes(q)
+    );
   }, [orders, search]);
 
   const showHint = !search || search.length < 4;

@@ -31,7 +31,7 @@ function dmyToDate(dmy) {
 }
 
 export default function Dashboard() {
-  const { orders: initOrderList, loading: loadingOrders } = useOrders();
+  const { activeOrders: initOrderList, loading: loadingOrders } = useOrders();
   const [pendingOrders, setPendingOrders] = useState({});
   const [pendingOrdersCount, setPendingOrdersCount] = useState(0);
   const [statusOrders, setStatusOrders] = useState({});

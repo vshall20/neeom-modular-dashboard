@@ -15,6 +15,7 @@ function getToday() {
 export default function Detail(props) {
   const { orders: contextOrders } = useOrders();
   const cached = contextOrders.find((o) => o.id === props.match.params.orderId);
+  // contextOrders includes closed orders, so direct URLs to closed orders also seed.
   const [order, setOrder] = useState(cached || {});
   const [allStatus, setAllStatus] = useState(null);
   const [loading, setLoading] = useState(!cached);

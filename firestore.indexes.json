@@ -1,22 +1,4 @@
 {
-  "indexes": [
-    {
-      "collectionGroup": "orders",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "orderStatus", "order": "ASCENDING" },
-        { "fieldPath": "orderId", "order": "DESCENDING" }
-      ]
-    },
-    {
-      "collectionGroup": "orders",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "orderType", "order": "ASCENDING" },
-        { "fieldPath": "orderStatus", "order": "ASCENDING" },
-        { "fieldPath": "orderId", "order": "DESCENDING" }
-      ]
-    }
-  ],
+  "indexes": [],
   "fieldOverrides": []
 }

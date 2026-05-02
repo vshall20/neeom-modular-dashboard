@@ -1,8 +1,14 @@
 import React, { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import XLSX from "xlsx";
-import { getOrderAge, getStatusClass } from "./utils";
+import {
+  getOrderAge,
+  getOrderAgeDays,
+  getAgeClass,
+  getStatusClass,
+} from "./utils";
 import { useOrders } from "../contexts/OrdersContext";
+import { isClosedStatus } from "../contexts/OrdersContext";
 
 function decodeFilterLabel(filter) {
   if (!filter) return null;
@@ -13,19 +19,46 @@ function decodeFilterLabel(filter) {
   return decoded;
 }
 
+function ageMatchesBucket(days, bucket) {
+  if (!bucket) return true;
+  if (bucket === "fresh") return days >= 0 && days <= 3;
+  if (bucket === "warning") return days >= 4 && days <= 7;
+  if (bucket === "danger") return days >= 8;
+  if (bucket === "packed") return days < 0;
+  return true;
+}
+
 export default function List(props) {
-  const { orders, loading } = useOrders();
+  const { orders, activeOrders, loading } = useOrders();
   const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
+  const [ageFilter, setAgeFilter] = useState("");
+
+  const statusOptions = useMemo(() => {
+    const set = new Set();
+    activeOrders.forEach((o) => {
+      if (o.orderStatus) set.add(o.orderStatus);
+    });
+    return Array.from(set).sort();
+  }, [activeOrders]);
 
   const filtered = useMemo(() => {
-    let result = orders.filter(
-      (o) => !String(o.orderStatus || "").toLowerCase().includes("close")
-    );
+    // Search across ALL orders (incl closed) when there's a query;
+    // otherwise default to active orders only.
+    const base = search ? orders : activeOrders;
+
+    let result = base;
     const filter = props.match.params.filter;
     if (filter) {
       const [key, rawVal] = filter.split("=");
       const val = decodeURIComponent(rawVal || "");
       result = result.filter((o) => String(o[key]) === val);
+    }
+    if (statusFilter) {
+      result = result.filter((o) => o.orderStatus === statusFilter);
+    }
+    if (ageFilter) {
+      result = result.filter((o) => ageMatchesBucket(getOrderAgeDays(o), ageFilter));
     }
     if (search) {
       const q = search.toLowerCase();
@@ -34,12 +67,11 @@ export default function List(props) {
       );
     }
     return result;
-  }, [orders, props.match.params.filter, search]);
+  }, [orders, activeOrders, props.match.params.filter, search, statusFilter, ageFilter]);
 
   function downloadToCSV() {
     const _orders = [];
     filtered.forEach((o) => {
-      if (o.orderStatus.includes("Close")) return;
       _orders.push({
         orderDate: o.orderDate,
         orderId: o.orderId,
@@ -63,6 +95,7 @@ export default function List(props) {
   }
 
   const filterLabel = decodeFilterLabel(props.match.params.filter);
+  const showingClosed = filtered.some((o) => isClosedStatus(o.orderStatus));
 
   return (
     <div className="page">
@@ -72,6 +105,8 @@ export default function List(props) {
           <div className="page-subtitle">
             {filterLabel ? (
               <>Filtered by {filterLabel} · {filtered.length} match{filtered.length === 1 ? "" : "es"}</>
+            ) : search ? (
+              <>{filtered.length} match{filtered.length === 1 ? "" : "es"} {showingClosed && <em>(includes closed)</em>}</>
             ) : (
               <>{filtered.length} active order{filtered.length === 1 ? "" : "s"}</>
             )}
@@ -95,11 +130,34 @@ export default function List(props) {
           </svg>
           <input
             type="search"
-            placeholder="Search by order id, party, status…"
+            placeholder="Search orders (incl. closed)…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
         </label>
+        <select
+          className="toolbar-filter"
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value)}
+          aria-label="Filter by status"
+        >
+          <option value="">All statuses</option>
+          {statusOptions.map((s) => (
+            <option key={s} value={s}>{s}</option>
+          ))}
+        </select>
+        <select
+          className="toolbar-filter"
+          value={ageFilter}
+          onChange={(e) => setAgeFilter(e.target.value)}
+          aria-label="Filter by age"
+        >
+          <option value="">Any age</option>
+          <option value="fresh">0-3 days</option>
+          <option value="warning">4-7 days</option>
+          <option value="danger">8+ days</option>
+          <option value="packed">Packed</option>
+        </select>
       </div>
 
       {loading && !orders.length && (
@@ -111,7 +169,7 @@ export default function List(props) {
       {!loading && !filtered.length && (
         <div className="empty-state">
           <div className="empty-state-title">No orders found</div>
-          <div>{search ? "Try a different search." : "There are no active orders right now."}</div>
+          <div>{search || statusFilter || ageFilter ? "Try adjusting search or filters." : "There are no active orders right now."}</div>
         </div>
       )}
 
@@ -131,29 +189,35 @@ export default function List(props) {
                 </tr>
               </thead>
               <tbody>
-                {filtered.map((order) => (
-                  <tr key={order.id}>
-                    <td data-label="Order ID">
-                      <Link to={`/detail/${order.id}`} className="order-id-link">
-                        {order.orderId}
-                      </Link>
-                    </td>
-                    <td data-label="Party">{order.partyId}</td>
-                    <td data-label="Type" className="muted">{order.orderType}</td>
-                    <td data-label="Order Date" className="text-tnum">{order.orderDate}</td>
-                    <td data-label="Last Updated" className="text-tnum muted">
-                      {order.orderHistory && order.orderHistory.length
-                        ? order.orderHistory[order.orderHistory.length - 1].updateDate
-                        : "—"}
-                    </td>
-                    <td data-label="Age" className="text-tnum muted">{getOrderAge(order)}</td>
-                    <td data-label="Status">
-                      <span className={`status-pill ${getStatusClass(order.orderStatus)}`}>
-                        {order.orderStatus}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
+                {filtered.map((order) => {
+                  const ageDays = getOrderAgeDays(order);
+                  const ageClass = getAgeClass(ageDays);
+                  return (
+                    <tr key={order.id}>
+                      <td data-label="Order ID">
+                        <Link to={`/detail/${order.id}`} className="order-id-link">
+                          {order.orderId}
+                        </Link>
+                      </td>
+                      <td data-label="Party">{order.partyId}</td>
+                      <td data-label="Type" className="muted">{order.orderType}</td>
+                      <td data-label="Order Date" className="text-tnum">{order.orderDate}</td>
+                      <td data-label="Last Updated" className="text-tnum muted">
+                        {order.orderHistory && order.orderHistory.length
+                          ? order.orderHistory[order.orderHistory.length - 1].updateDate
+                          : "—"}
+                      </td>
+                      <td data-label="Age" className={`text-tnum ${ageClass}`}>
+                        {getOrderAge(order)}
+                      </td>
+                      <td data-label="Status">
+                        <span className={`status-pill ${getStatusClass(order.orderStatus)}`}>
+                          {order.orderStatus}
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
