@@ -4,7 +4,7 @@ import { useHistory } from "react-router-dom";
 import app from "../firebase";
 import { useAuth } from "../contexts/AuthContext";
 import { useOrders } from "../contexts/OrdersContext";
-import { getStatusType } from "./utils/configCache";
+import { getStatusType, invalidatePartiesCache } from "./utils/configCache";
 import { getStatusClass } from "./utils";
 import {
   ACTIVE_COLLECTION,
@@ -112,6 +112,7 @@ export default function Detail(props) {
         );
       setPartyName(trimmed);
       setPartyNameInput("");
+      invalidatePartiesCache();
     } catch (err) {
       console.error("Save party name failed:", err);
     }

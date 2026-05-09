@@ -4,6 +4,7 @@ const cache = {
   orderTypes: null,
   areas: null,
   statusType: null,
+  parties: null,
 };
 
 export async function getOrderTypes() {
@@ -30,8 +31,24 @@ export async function getStatusType() {
   return status;
 }
 
+export async function getParties() {
+  if (cache.parties) return cache.parties;
+  const snap = await app.firestore().collection("parties").get();
+  const parties = snap.docs.map((d) => ({
+    partyId: d.id,
+    name: (d.data() && d.data().name) || "",
+  }));
+  cache.parties = parties;
+  return parties;
+}
+
+export function invalidatePartiesCache() {
+  cache.parties = null;
+}
+
 export function invalidateConfigCache() {
   cache.orderTypes = null;
   cache.areas = null;
   cache.statusType = null;
+  cache.parties = null;
 }

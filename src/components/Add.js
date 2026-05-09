@@ -3,7 +3,11 @@ import { Form, Button } from "react-bootstrap";
 import { useHistory } from "react-router-dom";
 import app from "../firebase";
 import { useAuth } from "../contexts/AuthContext";
-import { getOrderTypes, getAreas as getAreasCached } from "./utils/configCache";
+import {
+  getOrderTypes,
+  getAreas as getAreasCached,
+  getParties,
+} from "./utils/configCache";
 
 export default function Add() {
   const { currentUser, isAdmin } = useAuth();
@@ -11,6 +15,9 @@ export default function Add() {
 
   const [allType, setAllType] = useState([]);
   const [allAreas, setAllAreas] = useState([]);
+  const [parties, setParties] = useState([]);
+  const [partyInput, setPartyInput] = useState("");
+  const [partyDropdownOpen, setPartyDropdownOpen] = useState(false);
   const [data, setData] = useState({});
   const [feedback, setFeedback] = useState(null); // {type:'success'|'error', message}
   const [submitting, setSubmitting] = useState(false);
@@ -28,6 +35,7 @@ export default function Add() {
 
   function resetForm() {
     setData({});
+    setPartyInput("");
     const f = document.getElementById("addOrderForm");
     if (f) f.reset();
   }
@@ -110,8 +118,36 @@ export default function Add() {
       const areas = await getAreasCached();
       setAllAreas(areas);
       setSelectedArea(areas[0]);
+      try {
+        const list = await getParties();
+        setParties(list);
+      } catch (err) {
+        console.error("Parties load failed:", err);
+      }
     })();
   }, []);
+
+  function partyMatches() {
+    const q = (partyInput || "").trim().toLowerCase();
+    if (!q) return [];
+    return parties
+      .filter(
+        (p) =>
+          p.partyId.toLowerCase().includes(q) ||
+          (p.name && p.name.toLowerCase().includes(q))
+      )
+      .slice(0, 8);
+  }
+
+  function selectParty(p) {
+    setPartyInput(p.partyId);
+    setData({ ...data, formPartyId: p.partyId });
+    setPartyDropdownOpen(false);
+  }
+
+  const partyExactMatch = parties.find(
+    (p) => p.partyId === (partyInput || "").trim()
+  );
 
   return (
     <div className="page">
@@ -135,13 +171,71 @@ export default function Add() {
           />
         </Form.Group>
 
-        <Form.Group controlId="formPartyId">
+        <Form.Group controlId="formPartyId" style={{ position: "relative" }}>
           <Form.Label>Party ID</Form.Label>
           <Form.Control
-            placeholder="Customer / party reference"
-            defaultValue=""
-            onChange={handleOnChange}
+            placeholder="Type ID or party name"
+            value={partyInput}
+            onChange={(e) => {
+              setPartyInput(e.target.value);
+              setData({ ...data, formPartyId: e.target.value });
+              setPartyDropdownOpen(true);
+            }}
+            onFocus={() => setPartyDropdownOpen(true)}
+            onBlur={() => setTimeout(() => setPartyDropdownOpen(false), 120)}
+            autoComplete="off"
           />
+          {partyDropdownOpen && partyMatches().length > 0 && (
+            <div
+              style={{
+                position: "absolute",
+                zIndex: 10,
+                top: "100%",
+                left: 0,
+                right: 0,
+                background: "var(--surface, #fff)",
+                border: "1px solid var(--border, #d0d5dd)",
+                borderRadius: 6,
+                marginTop: 2,
+                boxShadow: "0 4px 10px rgba(0,0,0,0.06)",
+                maxHeight: 240,
+                overflowY: "auto",
+              }}
+            >
+              {partyMatches().map((p) => (
+                <div
+                  key={p.partyId}
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    selectParty(p);
+                  }}
+                  style={{
+                    padding: "8px 12px",
+                    cursor: "pointer",
+                    borderBottom: "1px solid var(--border, #eee)",
+                    fontSize: 14,
+                  }}
+                >
+                  <strong>{p.partyId}</strong>
+                  {p.name && (
+                    <span className="muted" style={{ marginLeft: 8 }}>
+                      — {p.name}
+                    </span>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+          {partyExactMatch && partyExactMatch.name && (
+            <Form.Text className="text-muted" style={{ fontSize: 12 }}>
+              {partyExactMatch.name}
+            </Form.Text>
+          )}
+          {!partyExactMatch && (partyInput || "").trim() && (
+            <Form.Text className="text-muted" style={{ fontSize: 12 }}>
+              New party — name can be set later on the order detail page.
+            </Form.Text>
+          )}
         </Form.Group>
 
         <Form.Group controlId="formOrderArea">
