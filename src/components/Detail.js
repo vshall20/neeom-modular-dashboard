@@ -449,25 +449,26 @@ export default function Detail(props) {
               <div className="detail-field-label">Box Counts (admin)</div>
               <div className="detail-field-value">
                 {!editingBoxAdmin ? (
-                  <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
-                    <span style={{ flex: 1, minWidth: 0 }}>
-                      Packed: {order.packedBoxCount != null ? order.packedBoxCount : "—"}
-                      {"  ·  "}
-                      Dispatch: {order.dispatchBoxCount != null ? order.dispatchBoxCount : "—"}
-                    </span>
+                  <div className="box-stats">
+                    <div className="box-stat">
+                      <div className="box-stat-label">Packed</div>
+                      <div className="box-stat-value">
+                        {order.packedBoxCount != null ? order.packedBoxCount : "—"}
+                      </div>
+                    </div>
+                    <div className="box-stat">
+                      <div className="box-stat-label">Dispatch</div>
+                      <div className="box-stat-value">
+                        {order.dispatchBoxCount != null ? order.dispatchBoxCount : "—"}
+                      </div>
+                    </div>
                     <button
                       type="button"
+                      className="icon-btn"
                       onClick={startEditBoxAdmin}
                       aria-label="Edit box counts"
                       title="Edit box counts"
-                      style={{
-                        background: "transparent",
-                        border: "none",
-                        padding: 4,
-                        cursor: "pointer",
-                        color: "var(--text-muted)",
-                        lineHeight: 0,
-                      }}
+                      style={{ marginLeft: "auto", alignSelf: "center" }}
                     >
                       <svg
                         width="14"
@@ -485,68 +486,58 @@ export default function Detail(props) {
                     </button>
                   </div>
                 ) : (
-                  <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-                    <label style={{ fontSize: 12, color: "var(--text-muted)", margin: 0 }}>
-                      Packed
-                      <input
-                        type="number"
-                        min="0"
-                        step="1"
-                        value={boxAdminInputs.packed}
-                        onChange={(e) =>
-                          setBoxAdminInputs({ ...boxAdminInputs, packed: e.target.value })
-                        }
+                  <>
+                    <div className="box-stats">
+                      <div className="box-stat">
+                        <div className="box-stat-label">Packed</div>
+                        <input
+                          type="number"
+                          min="0"
+                          step="1"
+                          inputMode="numeric"
+                          value={boxAdminInputs.packed}
+                          onChange={(e) =>
+                            setBoxAdminInputs({ ...boxAdminInputs, packed: e.target.value })
+                          }
+                          disabled={boxAdminSaving}
+                          aria-label="Packed box count"
+                        />
+                      </div>
+                      <div className="box-stat">
+                        <div className="box-stat-label">Dispatch</div>
+                        <input
+                          type="number"
+                          min="0"
+                          step="1"
+                          inputMode="numeric"
+                          value={boxAdminInputs.dispatch}
+                          onChange={(e) =>
+                            setBoxAdminInputs({ ...boxAdminInputs, dispatch: e.target.value })
+                          }
+                          disabled={boxAdminSaving}
+                          aria-label="Dispatch box count"
+                        />
+                      </div>
+                    </div>
+                    <div className="box-stats-edit-actions">
+                      <Button
+                        variant="outline-secondary"
+                        className="btn btn-app btn-outline-secondary"
+                        onClick={cancelEditBoxAdmin}
                         disabled={boxAdminSaving}
-                        style={{
-                          width: 80,
-                          marginLeft: 6,
-                          padding: "4px 8px",
-                          fontSize: 14,
-                          border: "1px solid var(--border)",
-                          borderRadius: 4,
-                        }}
-                      />
-                    </label>
-                    <label style={{ fontSize: 12, color: "var(--text-muted)", margin: 0 }}>
-                      Dispatch
-                      <input
-                        type="number"
-                        min="0"
-                        step="1"
-                        value={boxAdminInputs.dispatch}
-                        onChange={(e) =>
-                          setBoxAdminInputs({ ...boxAdminInputs, dispatch: e.target.value })
-                        }
+                      >
+                        Cancel
+                      </Button>
+                      <Button
+                        variant="primary"
+                        className="btn btn-app btn-primary"
+                        onClick={saveBoxAdmin}
                         disabled={boxAdminSaving}
-                        style={{
-                          width: 80,
-                          marginLeft: 6,
-                          padding: "4px 8px",
-                          fontSize: 14,
-                          border: "1px solid var(--border)",
-                          borderRadius: 4,
-                        }}
-                      />
-                    </label>
-                    <Button
-                      variant="primary"
-                      className="btn-app btn-primary"
-                      style={{ padding: "4px 10px", fontSize: 13 }}
-                      onClick={saveBoxAdmin}
-                      disabled={boxAdminSaving}
-                    >
-                      {boxAdminSaving ? "Saving…" : "Save"}
-                    </Button>
-                    <Button
-                      variant="outline-secondary"
-                      className="btn-app btn-outline-secondary"
-                      style={{ padding: "4px 10px", fontSize: 13 }}
-                      onClick={cancelEditBoxAdmin}
-                      disabled={boxAdminSaving}
-                    >
-                      Cancel
-                    </Button>
-                  </div>
+                      >
+                        {boxAdminSaving ? "Saving…" : "Save"}
+                      </Button>
+                    </div>
+                  </>
                 )}
               </div>
             </div>
@@ -572,23 +563,16 @@ export default function Detail(props) {
         </div>
 
         {boxCountMode && (
-          <div
-            className="form-feedback"
-            style={{
-              background: "#eef2ff",
-              color: "#3730a3",
-              marginBottom: 12,
-              padding: 12,
-            }}
-          >
-            <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-              <label style={{ fontSize: 13, fontWeight: 500, margin: 0 }}>
-                Boxes {isPackTransition ? "packed" : "dispatched"}:
-              </label>
+          <div className="box-count-prompt">
+            <div className="box-count-prompt-label">
+              Boxes {isPackTransition ? "packed" : "dispatched"}
+            </div>
+            <div className="box-count-prompt-row">
               <input
                 type="number"
                 min="1"
                 step="1"
+                inputMode="numeric"
                 value={boxCountInput}
                 onChange={(e) => {
                   setBoxCountInput(e.target.value);
@@ -602,19 +586,11 @@ export default function Detail(props) {
                 }}
                 disabled={saving}
                 autoFocus
-                style={{
-                  flex: "0 1 120px",
-                  minWidth: 80,
-                  padding: "4px 8px",
-                  fontSize: 14,
-                  border: "1px solid var(--border)",
-                  borderRadius: 4,
-                }}
+                aria-label={`Boxes ${isPackTransition ? "packed" : "dispatched"}`}
               />
               <Button
                 variant="primary"
-                className="btn-app btn-primary"
-                style={{ padding: "4px 12px", fontSize: 13 }}
+                className="btn btn-app btn-primary"
                 onClick={confirmBoxCount}
                 disabled={saving || !boxCountInput.trim()}
               >
@@ -622,8 +598,7 @@ export default function Detail(props) {
               </Button>
               <Button
                 variant="outline-secondary"
-                className="btn-app btn-outline-secondary"
-                style={{ padding: "4px 12px", fontSize: 13 }}
+                className="btn btn-app btn-outline-secondary"
                 onClick={cancelBoxCount}
                 disabled={saving}
               >
@@ -631,14 +606,12 @@ export default function Detail(props) {
               </Button>
             </div>
             {dispatchWithoutPackedRecord && !boxCountError && (
-              <div style={{ marginTop: 6, fontSize: 12, color: "var(--text-muted)" }}>
+              <div className="box-count-prompt-notice">
                 No packed count on record — saving dispatch count without tally check.
               </div>
             )}
             {boxCountError && (
-              <div style={{ marginTop: 6, fontSize: 13, color: "var(--danger)" }}>
-                {boxCountError}
-              </div>
+              <div className="box-count-prompt-error">{boxCountError}</div>
             )}
           </div>
         )}
