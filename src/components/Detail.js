@@ -259,9 +259,7 @@ export default function Detail(props) {
       order.packedBoxCount != null &&
       order.packedBoxCount !== count
     ) {
-      setBoxCountError(
-        `Mismatch — packed with ${order.packedBoxCount} boxes, you entered ${count}. Cannot dispatch.`
-      );
+      setBoxCountError("Box count mismatch. Cannot dispatch.");
       return;
     }
     const orderField = isPackTransition
