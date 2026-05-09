@@ -31,6 +31,9 @@ export default function Detail(props) {
   const [allStatus, setAllStatus] = useState(null);
   const [loading, setLoading] = useState(!cached);
   const [saving, setSaving] = useState(false);
+  const [referenceInput, setReferenceInput] = useState("");
+  const [referenceSaving, setReferenceSaving] = useState(false);
+  const [editingReference, setEditingReference] = useState(false);
   const history = useHistory();
   const { currentUser, isAdmin } = useAuth();
   const isClosed = source === CLOSED_COLLECTION;
@@ -61,11 +64,46 @@ export default function Detail(props) {
     if (cached) {
       setOrder(cached);
       setSource(ACTIVE_COLLECTION);
+      setLoading(false);
+    } else {
+      loadOrder();
     }
-    loadOrder();
     loadAllStatus();
     // eslint-disable-next-line
   }, [orderDocId]);
+
+  useEffect(() => {
+    setReferenceInput(order.reference || "");
+  }, [order.reference]);
+
+  async function saveReference() {
+    if (referenceSaving || !source) return;
+    const trimmed = referenceInput.trim();
+    if (trimmed === (order.reference || "")) return;
+    setReferenceSaving(true);
+    try {
+      await app
+        .firestore()
+        .collection(source)
+        .doc(orderDocId)
+        .update({ reference: trimmed });
+      setOrder({ ...order, reference: trimmed });
+      setEditingReference(false);
+    } catch (err) {
+      console.error("Save reference failed:", err);
+    }
+    setReferenceSaving(false);
+  }
+
+  function startEditReference() {
+    setReferenceInput(order.reference || "");
+    setEditingReference(true);
+  }
+
+  function cancelEditReference() {
+    setReferenceInput(order.reference || "");
+    setEditingReference(false);
+  }
 
   async function deleteOrder(cb) {
     try {
@@ -100,7 +138,7 @@ export default function Detail(props) {
           .collection(ACTIVE_COLLECTION)
           .doc(orderDocId)
           .update(updatedOrder);
-        await loadOrder();
+        setOrder(updatedOrder);
       }
     } catch (err) {
       console.error(err);
@@ -188,6 +226,86 @@ export default function Detail(props) {
           <div className="detail-field">
             <div className="detail-field-label">Party</div>
             <div className="detail-field-value">{order.partyId || "—"}</div>
+          </div>
+          <div className="detail-field">
+            <div className="detail-field-label">Reference</div>
+            <div className="detail-field-value">
+              {order.reference && !editingReference ? (
+                <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                  <span style={{ flex: 1, minWidth: 0 }}>{order.reference}</span>
+                  <button
+                    type="button"
+                    onClick={startEditReference}
+                    aria-label="Edit reference"
+                    title="Edit reference"
+                    style={{
+                      background: "transparent",
+                      border: "none",
+                      padding: 4,
+                      cursor: "pointer",
+                      color: "var(--text-muted)",
+                      lineHeight: 0,
+                    }}
+                  >
+                    <svg
+                      width="14"
+                      height="14"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <path d="M12 20h9" />
+                      <path d="M16.5 3.5a2.121 2.121 0 1 1 3 3L7 19l-4 1 1-4Z" />
+                    </svg>
+                  </button>
+                </div>
+              ) : (
+                <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                  <input
+                    type="text"
+                    value={referenceInput}
+                    onChange={(e) => setReferenceInput(e.target.value)}
+                    placeholder="e.g. Vishal, Acme office"
+                    disabled={referenceSaving}
+                    autoFocus={editingReference}
+                    style={{
+                      flex: 1,
+                      minWidth: 0,
+                      padding: "4px 8px",
+                      fontSize: 14,
+                      border: "1px solid var(--border)",
+                      borderRadius: 4,
+                    }}
+                  />
+                  <Button
+                    variant="primary"
+                    className="btn-app btn-primary"
+                    style={{ padding: "4px 10px", fontSize: 13 }}
+                    onClick={saveReference}
+                    disabled={
+                      referenceSaving ||
+                      referenceInput.trim() === (order.reference || "")
+                    }
+                  >
+                    {referenceSaving ? "Saving…" : "Save"}
+                  </Button>
+                  {editingReference && (
+                    <Button
+                      variant="outline-secondary"
+                      className="btn-app btn-outline-secondary"
+                      style={{ padding: "4px 10px", fontSize: 13 }}
+                      onClick={cancelEditReference}
+                      disabled={referenceSaving}
+                    >
+                      Cancel
+                    </Button>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
           <div className="detail-field">
             <div className="detail-field-label">Order Type</div>

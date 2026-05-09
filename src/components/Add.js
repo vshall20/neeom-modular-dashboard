@@ -65,6 +65,7 @@ export default function Add() {
       await app.firestore().collection("orders").add({
         orderId: data.formOrderId,
         partyId: data.formPartyId,
+        reference: (data.formReference || "").trim(),
         orderType: selectedType,
         orderQuantity: data.formOrderQuantity,
         orderDate: data.formOrderDate,
@@ -139,6 +140,15 @@ export default function Add() {
           <Form.Label>Party ID</Form.Label>
           <Form.Control
             placeholder="Customer / party reference"
+            defaultValue=""
+            onChange={handleOnChange}
+          />
+        </Form.Group>
+
+        <Form.Group controlId="formReference">
+          <Form.Label>Reference</Form.Label>
+          <Form.Control
+            placeholder="Optional — e.g. Vishal, Acme office (can be set later)"
             defaultValue=""
             onChange={handleOnChange}
           />
