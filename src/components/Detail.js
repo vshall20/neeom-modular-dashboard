@@ -31,6 +31,8 @@ export default function Detail(props) {
   const [allStatus, setAllStatus] = useState(null);
   const [loading, setLoading] = useState(!cached);
   const [saving, setSaving] = useState(false);
+  const [referenceInput, setReferenceInput] = useState("");
+  const [referenceSaving, setReferenceSaving] = useState(false);
   const history = useHistory();
   const { currentUser, isAdmin } = useAuth();
   const isClosed = source === CLOSED_COLLECTION;
@@ -61,11 +63,35 @@ export default function Detail(props) {
     if (cached) {
       setOrder(cached);
       setSource(ACTIVE_COLLECTION);
+      setLoading(false);
+    } else {
+      loadOrder();
     }
-    loadOrder();
     loadAllStatus();
     // eslint-disable-next-line
   }, [orderDocId]);
+
+  useEffect(() => {
+    setReferenceInput(order.reference || "");
+  }, [order.reference]);
+
+  async function saveReference() {
+    if (referenceSaving || !source) return;
+    const trimmed = referenceInput.trim();
+    if (trimmed === (order.reference || "")) return;
+    setReferenceSaving(true);
+    try {
+      await app
+        .firestore()
+        .collection(source)
+        .doc(orderDocId)
+        .update({ reference: trimmed });
+      setOrder({ ...order, reference: trimmed });
+    } catch (err) {
+      console.error("Save reference failed:", err);
+    }
+    setReferenceSaving(false);
+  }
 
   async function deleteOrder(cb) {
     try {
@@ -100,7 +126,7 @@ export default function Detail(props) {
           .collection(ACTIVE_COLLECTION)
           .doc(orderDocId)
           .update(updatedOrder);
-        await loadOrder();
+        setOrder(updatedOrder);
       }
     } catch (err) {
       console.error(err);
@@ -188,6 +214,40 @@ export default function Detail(props) {
           <div className="detail-field">
             <div className="detail-field-label">Party</div>
             <div className="detail-field-value">{order.partyId || "—"}</div>
+          </div>
+          <div className="detail-field">
+            <div className="detail-field-label">Reference</div>
+            <div className="detail-field-value">
+              <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                <input
+                  type="text"
+                  value={referenceInput}
+                  onChange={(e) => setReferenceInput(e.target.value)}
+                  placeholder="e.g. Vishal, Acme office"
+                  disabled={referenceSaving}
+                  style={{
+                    flex: 1,
+                    minWidth: 0,
+                    padding: "4px 8px",
+                    fontSize: 14,
+                    border: "1px solid var(--border)",
+                    borderRadius: 4,
+                  }}
+                />
+                <Button
+                  variant="primary"
+                  className="btn-app btn-primary"
+                  style={{ padding: "4px 10px", fontSize: 13 }}
+                  onClick={saveReference}
+                  disabled={
+                    referenceSaving ||
+                    referenceInput.trim() === (order.reference || "")
+                  }
+                >
+                  {referenceSaving ? "Saving…" : "Save"}
+                </Button>
+              </div>
+            </div>
           </div>
           <div className="detail-field">
             <div className="detail-field-label">Order Type</div>

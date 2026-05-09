@@ -10,8 +10,10 @@ export default function UserList() {
   const visible = useMemo(() => {
     if (!search || search.length < 4) return [];
     const q = search.toLowerCase();
-    return activeOrders.filter((o) =>
-      String(o.orderId || "").toLowerCase().includes(q)
+    return activeOrders.filter(
+      (o) =>
+        String(o.orderId || "").toLowerCase().includes(q) ||
+        String(o.reference || "").toLowerCase().includes(q)
     );
   }, [activeOrders, search]);
 
@@ -23,7 +25,7 @@ export default function UserList() {
         <div>
           <h1 className="page-title">Order Lookup</h1>
           <div className="page-subtitle">
-            Type at least 4 characters of an order ID to search.
+            Type at least 4 characters of an order ID or reference to search.
           </div>
         </div>
       </div>
@@ -36,7 +38,7 @@ export default function UserList() {
           </svg>
           <input
             type="search"
-            placeholder="Search order ID…"
+            placeholder="Search order ID or reference…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
