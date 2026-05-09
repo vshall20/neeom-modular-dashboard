@@ -4,7 +4,11 @@ import { useHistory } from "react-router-dom";
 import app from "../firebase";
 import { useAuth } from "../contexts/AuthContext";
 import { useOrders } from "../contexts/OrdersContext";
-import { getStatusType, invalidatePartiesCache } from "./utils/configCache";
+import {
+  getStatusType,
+  getParties,
+  invalidatePartiesCache,
+} from "./utils/configCache";
 import { getStatusClass } from "./utils";
 import {
   ACTIVE_COLLECTION,
@@ -75,14 +79,11 @@ export default function Detail(props) {
     if (!order.partyId) return undefined;
     let cancelled = false;
     setPartyName(null);
-    app
-      .firestore()
-      .collection("parties")
-      .doc(order.partyId)
-      .get()
-      .then((doc) => {
+    getParties()
+      .then((list) => {
         if (cancelled) return;
-        setPartyName(doc.exists && doc.data().name ? doc.data().name : "");
+        const match = list.find((p) => p.partyId === order.partyId);
+        setPartyName(match && match.name ? match.name : "");
       })
       .catch((err) => {
         console.error("Party name fetch failed:", err);
