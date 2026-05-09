@@ -998,12 +998,17 @@ a:hover {
     line-height: 24px;
   }
   .table.app-table tbody td[data-label="Party"]::after,
-  .table.app-table tbody td[data-label="Type"]::after {
+  .table.app-table tbody td[data-label="Type"]::after,
+  .table.app-table tbody td[data-label="Last Updated"]::after {
     content: " · ";
     color: var(--border-strong);
   }
-  .table.app-table tbody td[data-label="Order Date"],
-  .table.app-table tbody td[data-label="Last Updated"] {
+  .table.app-table tbody td[data-label="Last Updated"]::before {
+    content: "Updated ";
+    color: var(--text-muted);
+    display: inline;
+  }
+  .table.app-table tbody td[data-label="Order Date"] {
     display: none;
   }
 
