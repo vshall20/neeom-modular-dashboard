@@ -34,6 +34,12 @@ export default function Detail(props) {
   const [referenceInput, setReferenceInput] = useState("");
   const [referenceSaving, setReferenceSaving] = useState(false);
   const [editingReference, setEditingReference] = useState(false);
+  const [boxCountMode, setBoxCountMode] = useState(false);
+  const [boxCountInput, setBoxCountInput] = useState("");
+  const [boxCountError, setBoxCountError] = useState("");
+  const [editingBoxAdmin, setEditingBoxAdmin] = useState(false);
+  const [boxAdminInputs, setBoxAdminInputs] = useState({ packed: "", dispatch: "" });
+  const [boxAdminSaving, setBoxAdminSaving] = useState(false);
   const history = useHistory();
   const { currentUser, isAdmin } = useAuth();
   const isClosed = source === CLOSED_COLLECTION;
@@ -105,6 +111,59 @@ export default function Detail(props) {
     setEditingReference(false);
   }
 
+  useEffect(() => {
+    setBoxAdminInputs({
+      packed: order.packedBoxCount != null ? String(order.packedBoxCount) : "",
+      dispatch: order.dispatchBoxCount != null ? String(order.dispatchBoxCount) : "",
+    });
+  }, [order.packedBoxCount, order.dispatchBoxCount]);
+
+  function startEditBoxAdmin() {
+    setBoxAdminInputs({
+      packed: order.packedBoxCount != null ? String(order.packedBoxCount) : "",
+      dispatch: order.dispatchBoxCount != null ? String(order.dispatchBoxCount) : "",
+    });
+    setEditingBoxAdmin(true);
+  }
+
+  function cancelEditBoxAdmin() {
+    setBoxAdminInputs({
+      packed: order.packedBoxCount != null ? String(order.packedBoxCount) : "",
+      dispatch: order.dispatchBoxCount != null ? String(order.dispatchBoxCount) : "",
+    });
+    setEditingBoxAdmin(false);
+  }
+
+  async function saveBoxAdmin() {
+    if (boxAdminSaving || !source) return;
+    const update = {};
+    const packedRaw = boxAdminInputs.packed.trim();
+    const dispatchRaw = boxAdminInputs.dispatch.trim();
+    if (packedRaw !== "") {
+      const n = parseInt(packedRaw, 10);
+      if (!Number.isFinite(n) || n < 0) return;
+      if (n !== order.packedBoxCount) update.packedBoxCount = n;
+    }
+    if (dispatchRaw !== "") {
+      const n = parseInt(dispatchRaw, 10);
+      if (!Number.isFinite(n) || n < 0) return;
+      if (n !== order.dispatchBoxCount) update.dispatchBoxCount = n;
+    }
+    if (Object.keys(update).length === 0) {
+      setEditingBoxAdmin(false);
+      return;
+    }
+    setBoxAdminSaving(true);
+    try {
+      await app.firestore().collection(source).doc(orderDocId).update(update);
+      setOrder({ ...order, ...update });
+      setEditingBoxAdmin(false);
+    } catch (err) {
+      console.error("Save box counts failed:", err);
+    }
+    setBoxAdminSaving(false);
+  }
+
   async function deleteOrder(cb) {
     try {
       await deleteFromCollection(source || ACTIVE_COLLECTION, orderDocId);
@@ -146,14 +205,17 @@ export default function Detail(props) {
     setSaving(false);
   }
 
-  function handleAdvance() {
+  function handleAdvance(extras) {
     if (saving) return;
     if (!allStatus || !allStatus[order.orderType]) return;
     if (order.nextOrderStatus >= allStatus[order.orderType].length) return;
     const selectedStatus = allStatus[order.orderType][order.nextOrderStatus];
     const orderHistory = order.orderHistory || [];
+    const orderField = (extras && extras.orderField) || {};
+    const historyField = (extras && extras.historyField) || {};
     persistAdvance({
       ...order,
+      ...orderField,
       orderStatus: selectedStatus,
       nextOrderStatus: order.nextOrderStatus + 1,
       orderHistory: [
@@ -162,9 +224,52 @@ export default function Detail(props) {
           updatedBy: currentUser.email,
           updatedTo: selectedStatus,
           updateDate: getToday(),
+          ...historyField,
         },
       ],
     });
+  }
+
+  function onAdvanceClick() {
+    if (saving) return;
+    if (nextNeedsBoxCount) {
+      setBoxCountInput("");
+      setBoxCountError("");
+      setBoxCountMode(true);
+    } else {
+      handleAdvance();
+    }
+  }
+
+  function cancelBoxCount() {
+    setBoxCountMode(false);
+    setBoxCountInput("");
+    setBoxCountError("");
+  }
+
+  function confirmBoxCount() {
+    setBoxCountError("");
+    const count = parseInt(boxCountInput, 10);
+    if (!Number.isFinite(count) || count <= 0) {
+      setBoxCountError("Enter a positive number of boxes.");
+      return;
+    }
+    if (
+      isDispatchTransition &&
+      order.packedBoxCount != null &&
+      order.packedBoxCount !== count
+    ) {
+      setBoxCountError(
+        `Mismatch — packed with ${order.packedBoxCount} boxes, you entered ${count}. Cannot dispatch.`
+      );
+      return;
+    }
+    const orderField = isPackTransition
+      ? { packedBoxCount: count }
+      : { dispatchBoxCount: count };
+    handleAdvance({ orderField, historyField: { boxCount: count } });
+    setBoxCountMode(false);
+    setBoxCountInput("");
   }
 
   function handleDelete() {
@@ -189,6 +294,16 @@ export default function Detail(props) {
   const nextStageIndex = order.nextOrderStatus !== undefined ? order.nextOrderStatus + 1 : 1;
   const isComplete = nextStageIndex >= allStages.length;
   const nextStageName = !isComplete ? allStages[nextStageIndex] : null;
+  const nextLower = (nextStageName || "").toLowerCase();
+  const isPackTransition = nextLower.includes("pack");
+  const isDispatchTransition = nextLower.includes("dispatch");
+  const nextNeedsBoxCount = isPackTransition || isDispatchTransition;
+  const dispatchWithoutPackedRecord =
+    isDispatchTransition && order.packedBoxCount == null;
+  const hasReachedPack = (order.orderHistory || []).some((h) =>
+    String(h.updatedTo || "").toLowerCase().includes("pack")
+  );
+  const showAdminBoxTile = isAdmin && hasReachedPack;
 
   return (
     <div className="page">
@@ -331,15 +446,122 @@ export default function Detail(props) {
             <div className="detail-field-label">Created By</div>
             <div className="detail-field-value" style={{ fontSize: 13 }}>{order.createdBy}</div>
           </div>
+          {showAdminBoxTile && (
+            <div className="detail-field detail-field--wide">
+              <div className="detail-field-label">Box Counts (admin)</div>
+              <div className="detail-field-value">
+                {!editingBoxAdmin ? (
+                  <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
+                    <span style={{ flex: 1, minWidth: 0 }}>
+                      Packed: {order.packedBoxCount != null ? order.packedBoxCount : "—"}
+                      {"  ·  "}
+                      Dispatch: {order.dispatchBoxCount != null ? order.dispatchBoxCount : "—"}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={startEditBoxAdmin}
+                      aria-label="Edit box counts"
+                      title="Edit box counts"
+                      style={{
+                        background: "transparent",
+                        border: "none",
+                        padding: 4,
+                        cursor: "pointer",
+                        color: "var(--text-muted)",
+                        lineHeight: 0,
+                      }}
+                    >
+                      <svg
+                        width="14"
+                        height="14"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <path d="M12 20h9" />
+                        <path d="M16.5 3.5a2.121 2.121 0 1 1 3 3L7 19l-4 1 1-4Z" />
+                      </svg>
+                    </button>
+                  </div>
+                ) : (
+                  <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+                    <label style={{ fontSize: 12, color: "var(--text-muted)", margin: 0 }}>
+                      Packed
+                      <input
+                        type="number"
+                        min="0"
+                        step="1"
+                        value={boxAdminInputs.packed}
+                        onChange={(e) =>
+                          setBoxAdminInputs({ ...boxAdminInputs, packed: e.target.value })
+                        }
+                        disabled={boxAdminSaving}
+                        style={{
+                          width: 80,
+                          marginLeft: 6,
+                          padding: "4px 8px",
+                          fontSize: 14,
+                          border: "1px solid var(--border)",
+                          borderRadius: 4,
+                        }}
+                      />
+                    </label>
+                    <label style={{ fontSize: 12, color: "var(--text-muted)", margin: 0 }}>
+                      Dispatch
+                      <input
+                        type="number"
+                        min="0"
+                        step="1"
+                        value={boxAdminInputs.dispatch}
+                        onChange={(e) =>
+                          setBoxAdminInputs({ ...boxAdminInputs, dispatch: e.target.value })
+                        }
+                        disabled={boxAdminSaving}
+                        style={{
+                          width: 80,
+                          marginLeft: 6,
+                          padding: "4px 8px",
+                          fontSize: 14,
+                          border: "1px solid var(--border)",
+                          borderRadius: 4,
+                        }}
+                      />
+                    </label>
+                    <Button
+                      variant="primary"
+                      className="btn-app btn-primary"
+                      style={{ padding: "4px 10px", fontSize: 13 }}
+                      onClick={saveBoxAdmin}
+                      disabled={boxAdminSaving}
+                    >
+                      {boxAdminSaving ? "Saving…" : "Save"}
+                    </Button>
+                    <Button
+                      variant="outline-secondary"
+                      className="btn-app btn-outline-secondary"
+                      style={{ padding: "4px 10px", fontSize: 13 }}
+                      onClick={cancelEditBoxAdmin}
+                      disabled={boxAdminSaving}
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="detail-section-heading">
           <span>Production Stages</span>
-          {!isComplete && nextStageName && (
+          {!isComplete && nextStageName && !boxCountMode && (
             <Button
               variant="primary"
               className="btn-app btn-primary"
-              onClick={handleAdvance}
+              onClick={onAdvanceClick}
               disabled={saving}
               style={{ padding: "6px 14px", fontSize: 13 }}
             >
@@ -350,6 +572,78 @@ export default function Detail(props) {
             <span className="status-pill status-close">All stages complete</span>
           )}
         </div>
+
+        {boxCountMode && (
+          <div
+            className="form-feedback"
+            style={{
+              background: "#eef2ff",
+              color: "#3730a3",
+              marginBottom: 12,
+              padding: 12,
+            }}
+          >
+            <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+              <label style={{ fontSize: 13, fontWeight: 500, margin: 0 }}>
+                Boxes {isPackTransition ? "packed" : "dispatched"}:
+              </label>
+              <input
+                type="number"
+                min="1"
+                step="1"
+                value={boxCountInput}
+                onChange={(e) => {
+                  setBoxCountInput(e.target.value);
+                  if (boxCountError) setBoxCountError("");
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    confirmBoxCount();
+                  }
+                }}
+                disabled={saving}
+                autoFocus
+                style={{
+                  flex: "0 1 120px",
+                  minWidth: 80,
+                  padding: "4px 8px",
+                  fontSize: 14,
+                  border: "1px solid var(--border)",
+                  borderRadius: 4,
+                }}
+              />
+              <Button
+                variant="primary"
+                className="btn-app btn-primary"
+                style={{ padding: "4px 12px", fontSize: 13 }}
+                onClick={confirmBoxCount}
+                disabled={saving || !boxCountInput.trim()}
+              >
+                {saving ? "Saving…" : "Confirm"}
+              </Button>
+              <Button
+                variant="outline-secondary"
+                className="btn-app btn-outline-secondary"
+                style={{ padding: "4px 12px", fontSize: 13 }}
+                onClick={cancelBoxCount}
+                disabled={saving}
+              >
+                Cancel
+              </Button>
+            </div>
+            {dispatchWithoutPackedRecord && !boxCountError && (
+              <div style={{ marginTop: 6, fontSize: 12, color: "var(--text-muted)" }}>
+                No packed count on record — saving dispatch count without tally check.
+              </div>
+            )}
+            {boxCountError && (
+              <div style={{ marginTop: 6, fontSize: 13, color: "var(--danger)" }}>
+                {boxCountError}
+              </div>
+            )}
+          </div>
+        )}
 
         <div className="timeline">
           {allStages.map((stage, i) => {
@@ -397,11 +691,11 @@ export default function Detail(props) {
             >
               Close
             </Button>
-            {!isComplete && nextStageName && (
+            {!isComplete && nextStageName && !boxCountMode && (
               <Button
                 variant="primary"
                 className="btn-app btn-primary"
-                onClick={handleAdvance}
+                onClick={onAdvanceClick}
                 disabled={saving}
               >
                 {saving ? "Saving…" : "Save & Advance"}
