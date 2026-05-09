@@ -4,16 +4,16 @@ import { getOrderAge, getStatusClass } from "./utils";
 import { useOrders } from "../contexts/OrdersContext";
 
 export default function UserList() {
-  const { orders, loading } = useOrders();
+  const { activeOrders, loading } = useOrders();
   const [search, setSearch] = useState("");
 
   const visible = useMemo(() => {
     if (!search || search.length < 4) return [];
     const q = search.toLowerCase();
-    return orders.filter((o) =>
+    return activeOrders.filter((o) =>
       String(o.orderId || "").toLowerCase().includes(q)
     );
-  }, [orders, search]);
+  }, [activeOrders, search]);
 
   const showHint = !search || search.length < 4;
 
@@ -43,7 +43,7 @@ export default function UserList() {
         </label>
       </div>
 
-      {loading && !orders.length && (
+      {loading && !activeOrders.length && (
         <div className="empty-state">
           <span className="spinner-inline">Loading orders…</span>
         </div>
@@ -59,7 +59,7 @@ export default function UserList() {
       {!loading && !showHint && !visible.length && (
         <div className="empty-state">
           <div className="empty-state-title">No matches</div>
-          <div>No active order matches "{search}".</div>
+          <div>No active order matches "{search}". Closed orders are not shown.</div>
         </div>
       )}
 
