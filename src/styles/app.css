@@ -654,6 +654,10 @@ a:hover {
   padding: 12px 14px;
 }
 
+.detail-field--wide {
+  grid-column: span 2;
+}
+
 .detail-field-label {
   font-size: 11px;
   text-transform: uppercase;
