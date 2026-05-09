@@ -40,6 +40,7 @@ export default function Detail(props) {
   const [editingBoxAdmin, setEditingBoxAdmin] = useState(false);
   const [boxAdminInputs, setBoxAdminInputs] = useState({ packed: "", dispatch: "" });
   const [boxAdminSaving, setBoxAdminSaving] = useState(false);
+  const [boxAdminError, setBoxAdminError] = useState("");
   const history = useHistory();
   const { currentUser, isAdmin } = useAuth();
   const isClosed = source === CLOSED_COLLECTION;
@@ -123,6 +124,7 @@ export default function Detail(props) {
       packed: order.packedBoxCount != null ? String(order.packedBoxCount) : "",
       dispatch: order.dispatchBoxCount != null ? String(order.dispatchBoxCount) : "",
     });
+    setBoxAdminError("");
     setEditingBoxAdmin(true);
   }
 
@@ -131,22 +133,31 @@ export default function Detail(props) {
       packed: order.packedBoxCount != null ? String(order.packedBoxCount) : "",
       dispatch: order.dispatchBoxCount != null ? String(order.dispatchBoxCount) : "",
     });
+    setBoxAdminError("");
     setEditingBoxAdmin(false);
   }
 
   async function saveBoxAdmin() {
+    if (!isAdmin) return;
     if (boxAdminSaving || !source) return;
+    setBoxAdminError("");
     const update = {};
     const packedRaw = boxAdminInputs.packed.trim();
     const dispatchRaw = boxAdminInputs.dispatch.trim();
     if (packedRaw !== "") {
       const n = parseInt(packedRaw, 10);
-      if (!Number.isFinite(n) || n < 0) return;
+      if (!Number.isFinite(n) || n <= 0) {
+        setBoxAdminError("Box counts must be positive integers.");
+        return;
+      }
       if (n !== order.packedBoxCount) update.packedBoxCount = n;
     }
     if (dispatchRaw !== "") {
       const n = parseInt(dispatchRaw, 10);
-      if (!Number.isFinite(n) || n < 0) return;
+      if (!Number.isFinite(n) || n <= 0) {
+        setBoxAdminError("Box counts must be positive integers.");
+        return;
+      }
       if (n !== order.dispatchBoxCount) update.dispatchBoxCount = n;
     }
     if (Object.keys(update).length === 0) {
@@ -492,13 +503,14 @@ export default function Detail(props) {
                         <div className="box-stat-label">Packed</div>
                         <input
                           type="number"
-                          min="0"
+                          min="1"
                           step="1"
                           inputMode="numeric"
                           value={boxAdminInputs.packed}
-                          onChange={(e) =>
-                            setBoxAdminInputs({ ...boxAdminInputs, packed: e.target.value })
-                          }
+                          onChange={(e) => {
+                            setBoxAdminInputs({ ...boxAdminInputs, packed: e.target.value });
+                            if (boxAdminError) setBoxAdminError("");
+                          }}
                           disabled={boxAdminSaving}
                           aria-label="Packed box count"
                         />
@@ -507,18 +519,24 @@ export default function Detail(props) {
                         <div className="box-stat-label">Dispatch</div>
                         <input
                           type="number"
-                          min="0"
+                          min="1"
                           step="1"
                           inputMode="numeric"
                           value={boxAdminInputs.dispatch}
-                          onChange={(e) =>
-                            setBoxAdminInputs({ ...boxAdminInputs, dispatch: e.target.value })
-                          }
+                          onChange={(e) => {
+                            setBoxAdminInputs({ ...boxAdminInputs, dispatch: e.target.value });
+                            if (boxAdminError) setBoxAdminError("");
+                          }}
                           disabled={boxAdminSaving}
                           aria-label="Dispatch box count"
                         />
                       </div>
                     </div>
+                    {boxAdminError && (
+                      <div className="box-count-prompt-error" style={{ marginTop: 12 }}>
+                        {boxAdminError}
+                      </div>
+                    )}
                     <div className="box-stats-edit-actions">
                       <Button
                         variant="outline-secondary"
