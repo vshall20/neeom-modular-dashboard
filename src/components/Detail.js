@@ -69,8 +69,10 @@ export default function Detail(props) {
     if (cached) {
       setOrder(cached);
       setSource(ACTIVE_COLLECTION);
+      setLoading(false);
+    } else {
+      loadOrder();
     }
-    loadOrder();
     loadAllStatus();
     // eslint-disable-next-line
   }, [orderDocId]);
@@ -153,7 +155,7 @@ export default function Detail(props) {
           .collection(ACTIVE_COLLECTION)
           .doc(orderDocId)
           .update(updatedOrder);
-        await loadOrder();
+        setOrder(updatedOrder);
       }
     } catch (err) {
       console.error(err);
