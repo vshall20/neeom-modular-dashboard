@@ -227,11 +227,11 @@ export default function Detail(props) {
             <div className="detail-field-label">Party</div>
             <div className="detail-field-value">{order.partyId || "—"}</div>
           </div>
-          <div className="detail-field">
+          <div className="detail-field detail-field--wide">
             <div className="detail-field-label">Reference</div>
             <div className="detail-field-value">
               {order.reference && !editingReference ? (
-                <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
                   <span style={{ flex: 1, minWidth: 0 }}>{order.reference}</span>
                   <button
                     type="button"
@@ -263,7 +263,7 @@ export default function Detail(props) {
                   </button>
                 </div>
               ) : (
-                <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
                   <input
                     type="text"
                     value={referenceInput}
@@ -272,7 +272,7 @@ export default function Detail(props) {
                     disabled={referenceSaving}
                     autoFocus={editingReference}
                     style={{
-                      flex: 1,
+                      flex: "1 1 180px",
                       minWidth: 0,
                       padding: "4px 8px",
                       fontSize: 14,
