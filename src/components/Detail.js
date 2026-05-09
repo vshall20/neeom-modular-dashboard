@@ -34,6 +34,13 @@ export default function Detail(props) {
   const [referenceInput, setReferenceInput] = useState("");
   const [referenceSaving, setReferenceSaving] = useState(false);
   const [editingReference, setEditingReference] = useState(false);
+  const [boxCountMode, setBoxCountMode] = useState(false);
+  const [boxCountInput, setBoxCountInput] = useState("");
+  const [boxCountError, setBoxCountError] = useState("");
+  const [editingBoxAdmin, setEditingBoxAdmin] = useState(false);
+  const [boxAdminInputs, setBoxAdminInputs] = useState({ packed: "", dispatch: "" });
+  const [boxAdminSaving, setBoxAdminSaving] = useState(false);
+  const [boxAdminError, setBoxAdminError] = useState("");
   const history = useHistory();
   const { currentUser, isAdmin } = useAuth();
   const isClosed = source === CLOSED_COLLECTION;
@@ -105,6 +112,69 @@ export default function Detail(props) {
     setEditingReference(false);
   }
 
+  useEffect(() => {
+    setBoxAdminInputs({
+      packed: order.packedBoxCount != null ? String(order.packedBoxCount) : "",
+      dispatch: order.dispatchBoxCount != null ? String(order.dispatchBoxCount) : "",
+    });
+  }, [order.packedBoxCount, order.dispatchBoxCount]);
+
+  function startEditBoxAdmin() {
+    setBoxAdminInputs({
+      packed: order.packedBoxCount != null ? String(order.packedBoxCount) : "",
+      dispatch: order.dispatchBoxCount != null ? String(order.dispatchBoxCount) : "",
+    });
+    setBoxAdminError("");
+    setEditingBoxAdmin(true);
+  }
+
+  function cancelEditBoxAdmin() {
+    setBoxAdminInputs({
+      packed: order.packedBoxCount != null ? String(order.packedBoxCount) : "",
+      dispatch: order.dispatchBoxCount != null ? String(order.dispatchBoxCount) : "",
+    });
+    setBoxAdminError("");
+    setEditingBoxAdmin(false);
+  }
+
+  async function saveBoxAdmin() {
+    if (!isAdmin) return;
+    if (boxAdminSaving || !source) return;
+    setBoxAdminError("");
+    const update = {};
+    const packedRaw = boxAdminInputs.packed.trim();
+    const dispatchRaw = boxAdminInputs.dispatch.trim();
+    if (packedRaw !== "") {
+      const n = parseInt(packedRaw, 10);
+      if (!Number.isFinite(n) || n <= 0) {
+        setBoxAdminError("Box counts must be positive integers.");
+        return;
+      }
+      if (n !== order.packedBoxCount) update.packedBoxCount = n;
+    }
+    if (dispatchRaw !== "") {
+      const n = parseInt(dispatchRaw, 10);
+      if (!Number.isFinite(n) || n <= 0) {
+        setBoxAdminError("Box counts must be positive integers.");
+        return;
+      }
+      if (n !== order.dispatchBoxCount) update.dispatchBoxCount = n;
+    }
+    if (Object.keys(update).length === 0) {
+      setEditingBoxAdmin(false);
+      return;
+    }
+    setBoxAdminSaving(true);
+    try {
+      await app.firestore().collection(source).doc(orderDocId).update(update);
+      setOrder({ ...order, ...update });
+      setEditingBoxAdmin(false);
+    } catch (err) {
+      console.error("Save box counts failed:", err);
+    }
+    setBoxAdminSaving(false);
+  }
+
   async function deleteOrder(cb) {
     try {
       await deleteFromCollection(source || ACTIVE_COLLECTION, orderDocId);
@@ -146,14 +216,17 @@ export default function Detail(props) {
     setSaving(false);
   }
 
-  function handleAdvance() {
+  function handleAdvance(extras) {
     if (saving) return;
     if (!allStatus || !allStatus[order.orderType]) return;
     if (order.nextOrderStatus >= allStatus[order.orderType].length) return;
     const selectedStatus = allStatus[order.orderType][order.nextOrderStatus];
     const orderHistory = order.orderHistory || [];
+    const orderField = (extras && extras.orderField) || {};
+    const historyField = (extras && extras.historyField) || {};
     persistAdvance({
       ...order,
+      ...orderField,
       orderStatus: selectedStatus,
       nextOrderStatus: order.nextOrderStatus + 1,
       orderHistory: [
@@ -162,9 +235,50 @@ export default function Detail(props) {
           updatedBy: currentUser.email,
           updatedTo: selectedStatus,
           updateDate: getToday(),
+          ...historyField,
         },
       ],
     });
+  }
+
+  function onAdvanceClick() {
+    if (saving) return;
+    if (nextNeedsBoxCount) {
+      setBoxCountInput("");
+      setBoxCountError("");
+      setBoxCountMode(true);
+    } else {
+      handleAdvance();
+    }
+  }
+
+  function cancelBoxCount() {
+    setBoxCountMode(false);
+    setBoxCountInput("");
+    setBoxCountError("");
+  }
+
+  function confirmBoxCount() {
+    setBoxCountError("");
+    const count = parseInt(boxCountInput, 10);
+    if (!Number.isFinite(count) || count <= 0) {
+      setBoxCountError("Enter a positive number of boxes.");
+      return;
+    }
+    if (
+      isDispatchTransition &&
+      order.packedBoxCount != null &&
+      order.packedBoxCount !== count
+    ) {
+      setBoxCountError("Box count mismatch. Cannot dispatch.");
+      return;
+    }
+    const orderField = isPackTransition
+      ? { packedBoxCount: count }
+      : { dispatchBoxCount: count };
+    handleAdvance({ orderField, historyField: { boxCount: count } });
+    setBoxCountMode(false);
+    setBoxCountInput("");
   }
 
   function handleDelete() {
@@ -189,6 +303,16 @@ export default function Detail(props) {
   const nextStageIndex = order.nextOrderStatus !== undefined ? order.nextOrderStatus + 1 : 1;
   const isComplete = nextStageIndex >= allStages.length;
   const nextStageName = !isComplete ? allStages[nextStageIndex] : null;
+  const nextLower = (nextStageName || "").toLowerCase();
+  const isPackTransition = nextLower.includes("pack");
+  const isDispatchTransition = nextLower.includes("dispatch");
+  const nextNeedsBoxCount = isPackTransition || isDispatchTransition;
+  const dispatchWithoutPackedRecord =
+    isDispatchTransition && order.packedBoxCount == null;
+  const hasReachedPack = (order.orderHistory || []).some((h) =>
+    String(h.updatedTo || "").toLowerCase().includes("pack")
+  );
+  const showAdminBoxTile = isAdmin && hasReachedPack;
 
   return (
     <div className="page">
@@ -331,15 +455,120 @@ export default function Detail(props) {
             <div className="detail-field-label">Created By</div>
             <div className="detail-field-value" style={{ fontSize: 13 }}>{order.createdBy}</div>
           </div>
+          {showAdminBoxTile && (
+            <div className="detail-field detail-field--wide">
+              <div className="detail-field-label">Box Counts (admin)</div>
+              <div className="detail-field-value">
+                {!editingBoxAdmin ? (
+                  <div className="box-stats">
+                    <div className="box-stat">
+                      <div className="box-stat-label">Packed</div>
+                      <div className="box-stat-value">
+                        {order.packedBoxCount != null ? order.packedBoxCount : "—"}
+                      </div>
+                    </div>
+                    <div className="box-stat">
+                      <div className="box-stat-label">Dispatch</div>
+                      <div className="box-stat-value">
+                        {order.dispatchBoxCount != null ? order.dispatchBoxCount : "—"}
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      className="icon-btn"
+                      onClick={startEditBoxAdmin}
+                      aria-label="Edit box counts"
+                      title="Edit box counts"
+                      style={{ marginLeft: "auto", alignSelf: "center" }}
+                    >
+                      <svg
+                        width="14"
+                        height="14"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <path d="M12 20h9" />
+                        <path d="M16.5 3.5a2.121 2.121 0 1 1 3 3L7 19l-4 1 1-4Z" />
+                      </svg>
+                    </button>
+                  </div>
+                ) : (
+                  <>
+                    <div className="box-stats">
+                      <div className="box-stat">
+                        <div className="box-stat-label">Packed</div>
+                        <input
+                          type="number"
+                          min="1"
+                          step="1"
+                          inputMode="numeric"
+                          value={boxAdminInputs.packed}
+                          onChange={(e) => {
+                            setBoxAdminInputs({ ...boxAdminInputs, packed: e.target.value });
+                            if (boxAdminError) setBoxAdminError("");
+                          }}
+                          disabled={boxAdminSaving}
+                          aria-label="Packed box count"
+                        />
+                      </div>
+                      <div className="box-stat">
+                        <div className="box-stat-label">Dispatch</div>
+                        <input
+                          type="number"
+                          min="1"
+                          step="1"
+                          inputMode="numeric"
+                          value={boxAdminInputs.dispatch}
+                          onChange={(e) => {
+                            setBoxAdminInputs({ ...boxAdminInputs, dispatch: e.target.value });
+                            if (boxAdminError) setBoxAdminError("");
+                          }}
+                          disabled={boxAdminSaving}
+                          aria-label="Dispatch box count"
+                        />
+                      </div>
+                    </div>
+                    {boxAdminError && (
+                      <div className="box-count-prompt-error" style={{ marginTop: 12 }}>
+                        {boxAdminError}
+                      </div>
+                    )}
+                    <div className="box-stats-edit-actions">
+                      <Button
+                        variant="outline-secondary"
+                        className="btn btn-app btn-outline-secondary"
+                        onClick={cancelEditBoxAdmin}
+                        disabled={boxAdminSaving}
+                      >
+                        Cancel
+                      </Button>
+                      <Button
+                        variant="primary"
+                        className="btn btn-app btn-primary"
+                        onClick={saveBoxAdmin}
+                        disabled={boxAdminSaving}
+                      >
+                        {boxAdminSaving ? "Saving…" : "Save"}
+                      </Button>
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="detail-section-heading">
           <span>Production Stages</span>
-          {!isComplete && nextStageName && (
+          {!isComplete && nextStageName && !boxCountMode && (
             <Button
               variant="primary"
               className="btn-app btn-primary"
-              onClick={handleAdvance}
+              onClick={onAdvanceClick}
               disabled={saving}
               style={{ padding: "6px 14px", fontSize: 13 }}
             >
@@ -350,6 +579,60 @@ export default function Detail(props) {
             <span className="status-pill status-close">All stages complete</span>
           )}
         </div>
+
+        {boxCountMode && (
+          <div className="box-count-prompt">
+            <div className="box-count-prompt-label">
+              Boxes {isPackTransition ? "packed" : "dispatched"}
+            </div>
+            <div className="box-count-prompt-row">
+              <input
+                type="number"
+                min="1"
+                step="1"
+                inputMode="numeric"
+                value={boxCountInput}
+                onChange={(e) => {
+                  setBoxCountInput(e.target.value);
+                  if (boxCountError) setBoxCountError("");
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    confirmBoxCount();
+                  }
+                }}
+                disabled={saving}
+                autoFocus
+                aria-label={`Boxes ${isPackTransition ? "packed" : "dispatched"}`}
+              />
+              <Button
+                variant="primary"
+                className="btn btn-app btn-primary"
+                onClick={confirmBoxCount}
+                disabled={saving || !boxCountInput.trim()}
+              >
+                {saving ? "Saving…" : "Confirm"}
+              </Button>
+              <Button
+                variant="outline-secondary"
+                className="btn btn-app btn-outline-secondary"
+                onClick={cancelBoxCount}
+                disabled={saving}
+              >
+                Cancel
+              </Button>
+            </div>
+            {dispatchWithoutPackedRecord && !boxCountError && (
+              <div className="box-count-prompt-notice">
+                No packed count on record — saving dispatch count without tally check.
+              </div>
+            )}
+            {boxCountError && (
+              <div className="box-count-prompt-error">{boxCountError}</div>
+            )}
+          </div>
+        )}
 
         <div className="timeline">
           {allStages.map((stage, i) => {
@@ -397,11 +680,11 @@ export default function Detail(props) {
             >
               Close
             </Button>
-            {!isComplete && nextStageName && (
+            {!isComplete && nextStageName && !boxCountMode && (
               <Button
                 variant="primary"
                 className="btn-app btn-primary"
-                onClick={handleAdvance}
+                onClick={onAdvanceClick}
                 disabled={saving}
               >
                 {saving ? "Saving…" : "Save & Advance"}
