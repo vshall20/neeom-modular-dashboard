@@ -31,6 +31,10 @@ export default function Detail(props) {
   const [allStatus, setAllStatus] = useState(null);
   const [loading, setLoading] = useState(!cached);
   const [saving, setSaving] = useState(false);
+  // null = not yet fetched, "" = no name set, string = saved name
+  const [partyName, setPartyName] = useState(null);
+  const [partyNameInput, setPartyNameInput] = useState("");
+  const [partyNameSaving, setPartyNameSaving] = useState(false);
   const history = useHistory();
   const { currentUser, isAdmin } = useAuth();
   const isClosed = source === CLOSED_COLLECTION;
@@ -66,6 +70,53 @@ export default function Detail(props) {
     loadAllStatus();
     // eslint-disable-next-line
   }, [orderDocId]);
+
+  useEffect(() => {
+    if (!order.partyId) return undefined;
+    let cancelled = false;
+    setPartyName(null);
+    app
+      .firestore()
+      .collection("parties")
+      .doc(order.partyId)
+      .get()
+      .then((doc) => {
+        if (cancelled) return;
+        setPartyName(doc.exists && doc.data().name ? doc.data().name : "");
+      })
+      .catch((err) => {
+        console.error("Party name fetch failed:", err);
+        if (!cancelled) setPartyName("");
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [order.partyId]);
+
+  async function savePartyName() {
+    const trimmed = partyNameInput.trim();
+    if (!trimmed || partyNameSaving || !order.partyId) return;
+    setPartyNameSaving(true);
+    try {
+      await app
+        .firestore()
+        .collection("parties")
+        .doc(order.partyId)
+        .set(
+          {
+            name: trimmed,
+            addedBy: currentUser.email,
+            addedDate: getToday(),
+          },
+          { merge: true }
+        );
+      setPartyName(trimmed);
+      setPartyNameInput("");
+    } catch (err) {
+      console.error("Save party name failed:", err);
+    }
+    setPartyNameSaving(false);
+  }
 
   async function deleteOrder(cb) {
     try {
@@ -188,6 +239,45 @@ export default function Detail(props) {
           <div className="detail-field">
             <div className="detail-field-label">Party</div>
             <div className="detail-field-value">{order.partyId || "—"}</div>
+          </div>
+          <div className="detail-field">
+            <div className="detail-field-label">Party Name</div>
+            <div className="detail-field-value">
+              {!order.partyId ? (
+                "—"
+              ) : partyName === null ? (
+                <span className="muted" style={{ fontSize: 13 }}>Loading…</span>
+              ) : partyName ? (
+                partyName
+              ) : (
+                <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                  <input
+                    type="text"
+                    value={partyNameInput}
+                    onChange={(e) => setPartyNameInput(e.target.value)}
+                    placeholder="Add party name"
+                    disabled={partyNameSaving}
+                    style={{
+                      flex: 1,
+                      minWidth: 0,
+                      padding: "4px 8px",
+                      fontSize: 14,
+                      border: "1px solid var(--border)",
+                      borderRadius: 4,
+                    }}
+                  />
+                  <Button
+                    variant="primary"
+                    className="btn-app btn-primary"
+                    style={{ padding: "4px 10px", fontSize: 13 }}
+                    onClick={savePartyName}
+                    disabled={!partyNameInput.trim() || partyNameSaving}
+                  >
+                    {partyNameSaving ? "Saving…" : "Save"}
+                  </Button>
+                </div>
+              )}
+            </div>
           </div>
           <div className="detail-field">
             <div className="detail-field-label">Order Type</div>
