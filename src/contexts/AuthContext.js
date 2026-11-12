@@ -11,7 +11,12 @@ export function AuthProvider({ children }) {
   const [currentUser, setCurrentUser] = useState();
   const [isAdmin, setIsAdmin] = useState(false);
   const [isManager, setIsManager] = useState(false);
+  const [isDispatch, setIsDispatch] = useState(false);
   const [loading, setLoading] = useState(true);
+
+  function dispatchEmails() {
+    return ['dispatch@neeommodular.com'];
+  }
 
   function adminEmails() {
     return ['vishal@neeommodular.com','chirag@neeommodular.com','office@neeommodular.com','admin@neeommodular.com'];
@@ -51,6 +56,7 @@ export function AuthProvider({ children }) {
       let isManager = regexMatch ? regexMatch.length === 1 : false;
       setIsAdmin(isAdmin);
       setIsManager(isManager)
+      setIsDispatch(user ? dispatchEmails().includes(user.email) : false)
       setLoading(false)
     })
 
@@ -61,6 +67,7 @@ export function AuthProvider({ children }) {
     currentUser,
     isAdmin,
     isManager,
+    isDispatch,
     login,
     logout,
     resetPassword,

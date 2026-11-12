@@ -67,7 +67,7 @@ export default function Add() {
         partyId: data.formPartyId,
         reference: (data.formReference || "").trim(),
         orderType: selectedType,
-        orderQuantity: data.formOrderQuantity,
+        orderQuantity: (data.formOrderQuantity || "").trim(),
         orderDate: data.formOrderDate,
         orderStatus,
         nextOrderStatus: 0,
@@ -184,8 +184,8 @@ export default function Add() {
           <Form.Group controlId="formOrderQuantity">
             <Form.Label>Quantity</Form.Label>
             <Form.Control
-              type="number"
-              placeholder="0"
+              type="text"
+              placeholder="e.g. 3+3"
               defaultValue=""
               onChange={handleOnChange}
             />

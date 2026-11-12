@@ -76,6 +76,7 @@ Computed from `currentUser.email` on auth state change:
 
 - **Admin** — email in hard-coded list: `vishal@neeommodular.com`, `chirag@neeommodular.com`, `office@neeommodular.com`, `admin@neeommodular.com`
 - **Manager** — email matches regex `manager[0-9]+@neeommodular.com`
+- **Dispatch** — email in `dispatchEmails()` (`dispatch@neeommodular.com`). Regular-user access plus read-only view of the Packed/Dispatch box-count tile in Detail (`isDispatch`)
 - **Regular user** — anyone else who signs in
 
 Signup is disabled (`signup` is a no-op stub). Accounts created out-of-band in Firebase console.

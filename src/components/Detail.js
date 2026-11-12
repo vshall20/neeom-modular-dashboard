@@ -42,7 +42,7 @@ export default function Detail(props) {
   const [boxAdminSaving, setBoxAdminSaving] = useState(false);
   const [boxAdminError, setBoxAdminError] = useState("");
   const history = useHistory();
-  const { currentUser, isAdmin } = useAuth();
+  const { currentUser, isAdmin, isDispatch } = useAuth();
   const isClosed = source === CLOSED_COLLECTION;
 
   async function loadAllStatus() {
@@ -312,7 +312,7 @@ export default function Detail(props) {
   const hasReachedPack = (order.orderHistory || []).some((h) =>
     String(h.updatedTo || "").toLowerCase().includes("pack")
   );
-  const showAdminBoxTile = isAdmin && hasReachedPack;
+  const showAdminBoxTile = (isAdmin || isDispatch) && hasReachedPack;
 
   return (
     <div className="page">
@@ -457,7 +457,7 @@ export default function Detail(props) {
           </div>
           {showAdminBoxTile && (
             <div className="detail-field detail-field--wide">
-              <div className="detail-field-label">Box Counts (admin)</div>
+              <div className="detail-field-label">Box Counts{isAdmin ? " (admin)" : ""}</div>
               <div className="detail-field-value">
                 {!editingBoxAdmin ? (
                   <div className="box-stats">
@@ -473,28 +473,30 @@ export default function Detail(props) {
                         {order.dispatchBoxCount != null ? order.dispatchBoxCount : "—"}
                       </div>
                     </div>
-                    <button
-                      type="button"
-                      className="icon-btn"
-                      onClick={startEditBoxAdmin}
-                      aria-label="Edit box counts"
-                      title="Edit box counts"
-                      style={{ marginLeft: "auto", alignSelf: "center" }}
-                    >
-                      <svg
-                        width="14"
-                        height="14"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
+                    {isAdmin && (
+                      <button
+                        type="button"
+                        className="icon-btn"
+                        onClick={startEditBoxAdmin}
+                        aria-label="Edit box counts"
+                        title="Edit box counts"
+                        style={{ marginLeft: "auto", alignSelf: "center" }}
                       >
-                        <path d="M12 20h9" />
-                        <path d="M16.5 3.5a2.121 2.121 0 1 1 3 3L7 19l-4 1 1-4Z" />
-                      </svg>
-                    </button>
+                        <svg
+                          width="14"
+                          height="14"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        >
+                          <path d="M12 20h9" />
+                          <path d="M16.5 3.5a2.121 2.121 0 1 1 3 3L7 19l-4 1 1-4Z" />
+                        </svg>
+                      </button>
+                    )}
                   </div>
                 ) : (
                   <>
