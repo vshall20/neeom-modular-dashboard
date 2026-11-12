@@ -6,7 +6,7 @@ Guidance for Claude Code when working in this repo.
 
 **Neeom Modular Dashboard** — internal order-tracking web app for Neeom Modular. Tracks manufacturing/fabrication orders through status stages (BOM → … → Packed → Dispatch → Order Close) with role-based access for admins, managers, and regular users.
 
-Bootstrapped with Create React App. Backed by Firebase (Auth + Firestore). Deployed to Netlify (primary) and Firebase Hosting (configured).
+Bootstrapped with Create React App. Backed by Firebase (Auth + Firestore). Hosted on Netlify only (https://neeom-modular.netlify.app).
 
 ## Tech Stack
 
@@ -23,13 +23,13 @@ Note: Node version requires legacy OpenSSL provider (`NODE_OPTIONS=--openssl-leg
 ## Scripts
 
 ```bash
-yarn start    # dev server on :3000 (legacy openssl flag set)
-yarn build    # CRA production build → ./build
-yarn test     # CRA test runner
-yarn deploy   # build + netlify deploy --prod
+npm start        # dev server on :3000 (legacy openssl flag set)
+npm run build    # CRA production build → ./build
+npm test         # CRA test runner
+npm run deploy   # build + netlify deploy --prod
 ```
 
-Firebase Hosting also configured (`firebase.json` → serves `build/`, SPA rewrite to `index.html`).
+Use `npm`, not `yarn` (yarn not installed). `npm run` puts the local `netlify-cli` devDependency on PATH.
 
 ## Architecture
 
@@ -122,8 +122,8 @@ Signup is disabled (`signup` is a no-op stub). Accounts created out-of-band in F
 
 ## Deployment
 
-- **Netlify**: `yarn deploy` (build + `netlify deploy --prod`). `.netlify/` holds site link.
-- **Firebase Hosting**: `firebase.json` configured (`build/` → SPA rewrite). `.firebaserc` present. Deploy with `firebase deploy --only hosting` if used.
+- **Netlify only**: `npm run deploy` (build + `netlify deploy --prod`). `.netlify/` holds site link.
+- Firebase Hosting is **not used**. `firebase.json` hosting block is leftover config — don't deploy hosting to Firebase. Firebase CLI is only for `firestore:indexes`.
 
 ## Firestore cost / read budget
 
