@@ -20,9 +20,9 @@ export default function Header() {
     <header className="app-header">
       <div className="app-header-inner">
         <Link to="/" className="app-brand" onClick={() => setOpen(false)}>
-          <img src="/logo192.png" alt="Neeom Modular" />
+          <img src="/logo192.png" alt="NEOM Modular" />
           <div className="app-brand-text">
-            <span className="app-brand-name">Neeom Modular</span>
+            <span className="app-brand-name">NEOM Modular</span>
             <span className="app-brand-tag">Order Tracker</span>
           </div>
         </Link>

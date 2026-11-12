@@ -28,8 +28,8 @@ export default function Login() {
     <div className="auth-shell">
       <div className="auth-card">
         <div className="auth-brand">
-          <img src="/logo192.png" alt="Neeom Modular" />
-          <h1>Neeom Modular</h1>
+          <img src="/logo192.png" alt="NEOM Modular" />
+          <h1>NEOM Modular</h1>
           <p>Order Tracker</p>
         </div>
 
